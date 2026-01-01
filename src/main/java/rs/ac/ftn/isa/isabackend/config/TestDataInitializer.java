@@ -55,27 +55,24 @@ public class TestDataInitializer implements CommandLineRunner {
         Video video1 = new Video();
         video1.setTitle("Uvod u Spring Boot");
         video1.setDescription("Naučite osnove Spring Boot frameworka");
-        video1.setVideoUrl("https://youtu.be/Ivg8EBBjjNU?list=RDIvg8EBBjjNU");
+        video1.setVideoUrl("https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4");
         video1.setThumbnailUrl("https://picsum.photos/id/31/1000/500");
-        video1.setDuration(600);
         video1.setOwner(user1);
         videoService.save(video1);
 
         Video video2 = new Video();
         video2.setTitle("Angular za početnike");
         video2.setDescription("Kompletna Angular aplikacija od nule");
-        video2.setVideoUrl("https://example.com/video2.mp4");
+        video2.setVideoUrl("https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4");
         video2.setThumbnailUrl("https://picsum.photos/id/27/1000/500");
-        video2.setDuration(1200);
         video2.setOwner(user1);
         videoService.save(video2);
 
         Video video3 = new Video();
         video3.setTitle("PostgreSQL baze podataka");
         video3.setDescription("Kako efikasno koristiti PostgreSQL");
-        video3.setVideoUrl("https://example.com/video3.mp4");
-        video3.setThumbnailUrl("https://picsum.photos/id/57/1000/500");
-        video3.setDuration(900);
+        video3.setVideoUrl("https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4");
+        video3.setThumbnailUrl("https://picsum.photos/id/59/1000/500");
         video3.setOwner(user2);
         videoService.save(video3);
 
