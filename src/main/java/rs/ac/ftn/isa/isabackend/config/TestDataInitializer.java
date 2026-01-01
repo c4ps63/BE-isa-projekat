@@ -39,6 +39,7 @@ public class TestDataInitializer implements CommandLineRunner {
         user1.setPassword("password123"); // TODO: Hash-ovati lozinku kasnije
         user1.setRole(Role.USER);
         user1.setBio("Volim da pravim video sadržaj!");
+        user1.setAvatarUrl("https://picsum.photos/id/53/600/500");
         userService.save(user1);
 
         User user2 = new User();
@@ -47,14 +48,15 @@ public class TestDataInitializer implements CommandLineRunner {
         user2.setPassword("password123");
         user2.setRole(Role.USER);
         user2.setBio("Tech enthusiast");
+        user1.setAvatarUrl("https://picsum.photos/id/41/600/500");
         userService.save(user2);
 
         // Kreiraj test videe
         Video video1 = new Video();
         video1.setTitle("Uvod u Spring Boot");
         video1.setDescription("Naučite osnove Spring Boot frameworka");
-        video1.setVideoUrl("https://example.com/video1.mp4");
-        video1.setThumbnailUrl("https://example.com/thumb1.jpg");
+        video1.setVideoUrl("https://youtu.be/Ivg8EBBjjNU?list=RDIvg8EBBjjNU");
+        video1.setThumbnailUrl("https://picsum.photos/id/31/1000/500");
         video1.setDuration(600);
         video1.setOwner(user1);
         videoService.save(video1);
@@ -63,7 +65,7 @@ public class TestDataInitializer implements CommandLineRunner {
         video2.setTitle("Angular za početnike");
         video2.setDescription("Kompletna Angular aplikacija od nule");
         video2.setVideoUrl("https://example.com/video2.mp4");
-        video2.setThumbnailUrl("https://example.com/thumb2.jpg");
+        video2.setThumbnailUrl("https://picsum.photos/id/27/1000/500");
         video2.setDuration(1200);
         video2.setOwner(user1);
         videoService.save(video2);
@@ -72,7 +74,7 @@ public class TestDataInitializer implements CommandLineRunner {
         video3.setTitle("PostgreSQL baze podataka");
         video3.setDescription("Kako efikasno koristiti PostgreSQL");
         video3.setVideoUrl("https://example.com/video3.mp4");
-        video3.setThumbnailUrl("https://example.com/thumb3.jpg");
+        video3.setThumbnailUrl("https://picsum.photos/id/57/1000/500");
         video3.setDuration(900);
         video3.setOwner(user2);
         videoService.save(video3);
