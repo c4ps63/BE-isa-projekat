@@ -7,10 +7,12 @@ import org.springframework.web.bind.annotation.*;
 import rs.ac.ftn.isa.isabackend.dto.CommentDTO;
 import rs.ac.ftn.isa.isabackend.model.Comment;
 import rs.ac.ftn.isa.isabackend.service.CommentService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 
 @RestController
 @RequestMapping("/api/comments")
-@CrossOrigin(origins = "http://localhost:4200")
 public class CommentController {
 
     private final CommentService commentService;
@@ -31,5 +33,12 @@ public class CommentController {
         return ResponseEntity.ok(commentDTOs);
     }
 
-    // TODO: POST, DELETE - za autentifikovane korisnike
+    @PostMapping
+    public ResponseEntity<CommentDTO> createComment(@RequestBody CommentDTO commentDTO) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        Comment comment = commentService.createComment(commentDTO.getVideoId(), commentDTO.getText(), username);
+        return ResponseEntity.ok(new CommentDTO(comment));
+    }
 }
