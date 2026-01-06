@@ -15,7 +15,8 @@ import java.util.Date;
 @Component
 public class TokenUtils {
 
-    private final String jwtSecret = "MojSuperTajniKljucKojiMoraBitiJakoDugacakZbogBezbednosti123456789";
+    private final String jwtSecret = "9z8x7c6v5b4n3m2l1k0j9h8g7f6d5s4a3P2O1I0U9Y8T7R6E5W4Q3L2K1J0H9G8F7D6S5A4Z321";
+
     private final long jwtExpirationMs = 86400000;
 
     private Key getSigningKey() {

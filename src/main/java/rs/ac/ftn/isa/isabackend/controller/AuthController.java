@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -74,11 +76,22 @@ public class AuthController {
 
             return ResponseEntity.ok(jwt);
 
+        } catch (DisabledException e) {
+            System.out.println(">>> Account is not activated: " + loginDto.getEmail());
+            loginAttemptService.loginFailed(ip);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Account is not activated. Please check your email.");
+        } catch (BadCredentialsException e) {
+            System.out.println(">>> Invalid credentials for: " + loginDto.getEmail());
+            loginAttemptService.loginFailed(ip);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Invalid email or password.");
         } catch (Exception e) {
-            System.out.println(">>> LOGIN GREŠKA: " + e.getMessage());
+            System.out.println(">>> LOGIN ERROR: " + e.getClass().getName() + " - " + e.getMessage());
             e.printStackTrace();
             loginAttemptService.loginFailed(ip);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password, or account is not activated.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Authentication failed.");
         }
     }
 }
