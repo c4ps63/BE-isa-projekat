@@ -3,6 +3,7 @@ package rs.ac.ftn.isa.isabackend.dto;
 import rs.ac.ftn.isa.isabackend.model.Video;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 public class VideoDTO {
     private Long id;
@@ -15,6 +16,8 @@ public class VideoDTO {
     private Long likeCount;
     private LocalDateTime uploadedAt;
     private UserDTO owner;
+    private String location;
+    private Set<String> tags;
 
     public VideoDTO() {
     }
@@ -30,6 +33,8 @@ public class VideoDTO {
         this.likeCount = video.getLikeCount();
         this.uploadedAt = video.getUploadedAt();
         this.owner = new UserDTO(video.getOwner());
+        this.location = video.getLocation();
+        this.tags = video.getTags();
     }
 
     // Getters and Setters
@@ -111,5 +116,21 @@ public class VideoDTO {
 
     public void setOwner(UserDTO owner) {
         this.owner = owner;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public Set<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<String> tags) {
+        this.tags = tags;
     }
 }
