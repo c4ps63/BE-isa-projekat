@@ -9,6 +9,7 @@ public class CommentDTO {
     private String text;
     private LocalDateTime createdAt;
     private UserDTO author;
+    private Long videoId;
 
     public CommentDTO() {
     }
@@ -52,4 +53,9 @@ public class CommentDTO {
     public void setAuthor(UserDTO author) {
         this.author = author;
     }
+
+    public Long getVideoId() { return videoId; }
+
+    public void setVideoId(Long videoId) { this.videoId = videoId;  }
+
 }
