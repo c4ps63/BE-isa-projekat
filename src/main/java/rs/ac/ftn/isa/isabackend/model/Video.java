@@ -35,6 +35,13 @@ public class Video {
 
     private Integer duration; // u sekundama
 
+    private String location;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "video_tags", joinColumns = @JoinColumn(name = "video_id"))
+    @Column(name = "tag")
+    private Set<String> tags = new HashSet<>();
+
     @Column(nullable = false)
     private Long viewCount = 0L;
 

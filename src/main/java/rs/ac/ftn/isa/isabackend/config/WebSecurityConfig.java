@@ -70,6 +70,8 @@ public class WebSecurityConfig {
 
                         .requestMatchers("/h2-console/**").permitAll()
 
+                        .requestMatchers("/uploads/**").permitAll()
+
                         .requestMatchers(HttpMethod.GET, "/api/videos/**").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
