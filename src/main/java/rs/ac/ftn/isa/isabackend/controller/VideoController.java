@@ -5,16 +5,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import rs.ac.ftn.isa.isabackend.dto.VideoDTO;
 import rs.ac.ftn.isa.isabackend.model.Video;
 import rs.ac.ftn.isa.isabackend.service.VideoService;
-import org.springframework.core.io.Resource;
 
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/videos")
@@ -51,61 +52,35 @@ public class VideoController {
         }
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<Page<VideoDTO>> getVideosByUserId(
-            @PathVariable Long userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-
-        Page<Video> videos = videoService.findByOwnerId(userId, page, size);
-        Page<VideoDTO> videoDTOs = videos.map(VideoDTO::new);
-        return ResponseEntity.ok(videoDTOs);
-    }
-
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ROLE_USER')")
     public ResponseEntity<?> uploadVideo(
             @RequestParam("title") String title,
-            @RequestParam("description") String description,
-            @RequestParam("tags") Set<String> tags,
+            @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "tags", required = false) String tags,
             @RequestParam("videoFile") MultipartFile videoFile,
             @RequestParam("thumbnailFile") MultipartFile thumbnailFile,
-            @RequestParam("userId") Long userId
+            Principal principal
     ) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Korisnik nije ulogovan.");
+        }
         try {
-            if (videoFile.isEmpty() || thumbnailFile.isEmpty()) {
-                return ResponseEntity.badRequest().body("Video i thumbnail su obavezni.");
+            if (videoFile.getSize() > 200 * 1024 * 1024) {
+                return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body("Video je prevelik (max 200MB)");
             }
 
-            Video savedVideo = videoService.uploadVideo(title, description, tags, location, videoFile, thumbnailFile, userId);
-            return ResponseEntity.ok(new VideoDTO(savedVideo));
+            String username = principal.getName();
+            VideoDTO savedVideo = videoService.uploadVideoWithUser(title, description, videoFile, thumbnailFile, username);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedVideo);
 
         } catch (IOException e) {
-            return ResponseEntity.internalServerError().body("Greška pri čitanju fajla: " + e.getMessage());
-        } catch (RuntimeException e) {
-            return ResponseEntity.internalServerError().body("Greška: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Greška pri čuvanju fajla: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
-
-    @GetMapping(value = "/thumbnail/{fileName}", produces = MediaType.IMAGE_JPEG_VALUE)
-    public ResponseEntity<byte[]> getThumbnail(@PathVariable String fileName) {
-        try {
-            byte[] imageBytes = videoService.getThumbnailBytes(fileName);
-            return ResponseEntity.ok(imageBytes);
-        } catch (IOException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    @GetMapping(value = "/stream/{fileName}", produces = "video/mp4")
-    public ResponseEntity<byte[]> streamVideo(@PathVariable String fileName) {
-        try {
-            byte[] videoBytes = videoService.getThumbnailBytes(fileName);
-            return ResponseEntity.ok(videoBytes);
-        } catch (IOException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
     // TODO: POST, PUT, DELETE - za autentifikovane korisnike (dodajemo kasnije sa Spring Security)
 }
