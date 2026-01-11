@@ -76,6 +76,10 @@ public class WebSecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/api/likes/**").permitAll()
+
+                        .requestMatchers(HttpMethod.POST, "/api/likes/toggle/**").permitAll()
+
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         .anyRequest().authenticated()
