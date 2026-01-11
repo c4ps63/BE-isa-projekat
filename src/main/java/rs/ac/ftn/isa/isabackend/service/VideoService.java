@@ -70,7 +70,7 @@ public class VideoService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public VideoDTO uploadVideoWithUser(String title, String description, MultipartFile videoFile, MultipartFile thumbnailFile, String username) throws IOException {
+    public VideoDTO uploadVideoWithUser(String title, String description, MultipartFile videoFile, MultipartFile thumbnailFile, String username, Integer duration) throws IOException {
 
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Korisnik nije pronađen! (Tražen username: " + username + ")"));
@@ -93,7 +93,7 @@ public class VideoService {
         video.setOwner(owner);
         video.setUploadedAt(LocalDateTime.now());
         video.setViewCount(0L);
-        video.setDuration(0);
+        video.setDuration(duration);
 
         Video savedVideo = videoRepository.save(video);
 

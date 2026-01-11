@@ -2,16 +2,15 @@ package rs.ac.ftn.isa.isabackend.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import rs.ac.ftn.isa.isabackend.model.Like;
-import rs.ac.ftn.isa.isabackend.service.LikeService;
 import rs.ac.ftn.isa.isabackend.model.Video;
-import rs.ac.ftn.isa.isabackend.repository.VideoRepository;
 import rs.ac.ftn.isa.isabackend.repository.UserRepository;
-
-import org.springframework.security.access.prepost.PreAuthorize;
+import rs.ac.ftn.isa.isabackend.repository.VideoRepository;
+import rs.ac.ftn.isa.isabackend.service.LikeService;
 
 import java.util.Map;
 
@@ -47,13 +46,13 @@ public class LikeController {
 
         Like like = likeService.toggleLike(user, video);
 
-        // vraća true ako je sada lajkovano, false ako je unlike
         return ResponseEntity.ok(Map.of("liked", like != null));
     }
 
     @GetMapping("/video/{videoId}/is-liked")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Boolean>> isLiked(@PathVariable Long videoId) {
+
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
 
@@ -64,5 +63,4 @@ public class LikeController {
 
         return ResponseEntity.ok(Map.of("liked", liked));
     }
-
 }

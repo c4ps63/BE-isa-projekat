@@ -59,6 +59,7 @@ public class VideoController {
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "location", required = false) String location,
             @RequestParam(value = "tags", required = false) String tags,
+            @RequestParam("duration") Integer duration,
             @RequestParam("videoFile") MultipartFile videoFile,
             @RequestParam("thumbnailFile") MultipartFile thumbnailFile,
             Principal principal
@@ -72,7 +73,7 @@ public class VideoController {
             }
 
             String username = principal.getName();
-            VideoDTO savedVideo = videoService.uploadVideoWithUser(title, description, videoFile, thumbnailFile, username);
+            VideoDTO savedVideo = videoService.uploadVideoWithUser(title, description, videoFile, thumbnailFile, username, duration);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(savedVideo);
 
