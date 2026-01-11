@@ -52,6 +52,17 @@ public class VideoController {
         }
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<Page<VideoDTO>> getVideosByUser(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+
+        Page<Video> videos = videoService.findByOwnerId(userId, page, size);
+        Page<VideoDTO> videoDTOs = videos.map(VideoDTO::new);
+        return ResponseEntity.ok(videoDTOs);
+    }
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ROLE_USER')")
     public ResponseEntity<?> uploadVideo(
