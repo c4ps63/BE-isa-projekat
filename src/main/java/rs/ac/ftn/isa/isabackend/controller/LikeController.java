@@ -2,107 +2,65 @@ package rs.ac.ftn.isa.isabackend.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import rs.ac.ftn.isa.isabackend.model.Like;
-import rs.ac.ftn.isa.isabackend.model.User;
 import rs.ac.ftn.isa.isabackend.model.Video;
+import rs.ac.ftn.isa.isabackend.repository.UserRepository;
 import rs.ac.ftn.isa.isabackend.repository.VideoRepository;
-import rs.ac.ftn.isa.isabackend.security.auth.TokenBasedAuthentication;
 import rs.ac.ftn.isa.isabackend.service.LikeService;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/likes")
-@CrossOrigin(origins = "http://localhost:4200")
 public class LikeController {
 
-    @Autowired
-    private LikeService likeService;
+    private final LikeService likeService;
+    private final UserRepository userRepository;
+    private final VideoRepository videoRepository;
 
     @Autowired
-    private VideoRepository videoRepository;
-
-    @PostMapping("/toggle/{videoId}")
-    public ResponseEntity<?> toggleLike(@PathVariable Long videoId) {
-        try {
-            TokenBasedAuthentication auth = (TokenBasedAuthentication) SecurityContextHolder.getContext().getAuthentication();
-            User user = (User) auth.getPrincipal();
-
-            Video video = videoRepository.findById(videoId)
-                    .orElseThrow(() -> new RuntimeException("Video nije pronađen"));
-
-            Like result = likeService.toggleLike(user, video);
-
-            if (result == null) {
-                return ResponseEntity.ok().body(new LikeResponseDto(false, "Like je uklonjen"));
-            } else {
-                return ResponseEntity.ok().body(new LikeResponseDto(true, "Video je lajkovan"));
-            }
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ErrorDto(e.getMessage()));
-        }
+    public LikeController(LikeService likeService,
+                          UserRepository userRepository,
+                          VideoRepository videoRepository) {
+        this.likeService = likeService;
+        this.userRepository = userRepository;
+        this.videoRepository = videoRepository;
     }
 
-    @GetMapping("/is-liked/{videoId}")
-    public ResponseEntity<?> isVideoLikedByUser(@PathVariable Long videoId) {
-        try {
-            TokenBasedAuthentication auth = (TokenBasedAuthentication) SecurityContextHolder.getContext().getAuthentication();
-            User user = (User) auth.getPrincipal();
+    @PostMapping("/video/{videoId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Boolean>> toggleLike(@PathVariable Long videoId) {
 
-            boolean isLiked = likeService.isLikedByUser(user.getId(), videoId);
-            return ResponseEntity.ok(isLiked);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ErrorDto(e.getMessage()));
-        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        var user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        var video = videoRepository.findById(videoId)
+                .orElseThrow(() -> new RuntimeException("Video not found"));
+
+        Like like = likeService.toggleLike(user, video);
+
+        return ResponseEntity.ok(Map.of("liked", like != null));
     }
 
-    @GetMapping("/count/{videoId}")
-    public ResponseEntity<?> getLikeCount(@PathVariable Long videoId) {
-        try {
-            Video video = videoRepository.findById(videoId)
-                    .orElseThrow(() -> new RuntimeException("Video nije pronađen"));
+    @GetMapping("/video/{videoId}/is-liked")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Boolean>> isLiked(@PathVariable Long videoId) {
 
-            long likeCount = video.getLikeCount();
-            return ResponseEntity.ok(likeCount);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ErrorDto(e.getMessage()));
-        }
-    }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
 
+        var user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteLike(@PathVariable Long id) {
-        try {
-            likeService.deleteById(id);
-            return ResponseEntity.ok().body(new MessageDto("Like je obrisan"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ErrorDto(e.getMessage()));
-        }
-    }
+        boolean liked = likeService.isLikedByUser(user.getId(), videoId);
 
-    static class LikeResponseDto {
-        public boolean liked;
-        public String message;
-
-        public LikeResponseDto(boolean liked, String message) {
-            this.liked = liked;
-            this.message = message;
-        }
-    }
-
-    static class ErrorDto {
-        public String error;
-
-        public ErrorDto(String error) {
-            this.error = error;
-        }
-    }
-
-    static class MessageDto {
-        public String message;
-
-        public MessageDto(String message) {
-            this.message = message;
-        }
+        return ResponseEntity.ok(Map.of("liked", liked));
     }
 }
