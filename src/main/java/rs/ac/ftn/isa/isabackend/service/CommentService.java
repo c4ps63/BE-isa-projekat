@@ -1,6 +1,8 @@
 package rs.ac.ftn.isa.isabackend.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +36,11 @@ public class CommentService {
         this.commentRepository = commentRepository;
     }
 
+    @Cacheable(
+            value = "commentsByVideo",
+            key = "#videoId + '-' + #page + '-' + #size"
+    )
+
     public Page<Comment> findByVideoId(Long videoId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return commentRepository.findByVideoIdOrderByCreatedAtDesc(videoId, pageable);
@@ -49,11 +56,11 @@ public class CommentService {
     }
 
     @Transactional
-    public void deleteById(Long id) {
-        commentRepository.deleteById(id);
-    }
-
-    @Transactional
+    @CacheEvict(
+            value = "commentsByVideo",
+            key = "#videoId + '-' + 0 + '-' + 20",
+            allEntries = true
+    )
     public Comment createComment(Long videoId, String text, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -68,6 +75,12 @@ public class CommentService {
         comment.setCreatedAt(LocalDateTime.now());
 
         return commentRepository.save(comment);
+    }
+
+    @Transactional
+    @CacheEvict(value = "commentsByVideo", allEntries = true)
+    public void deleteById(Long id) {
+        commentRepository.deleteById(id);
     }
 
 }
