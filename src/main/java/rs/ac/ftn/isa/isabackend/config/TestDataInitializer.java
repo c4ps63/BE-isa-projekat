@@ -95,31 +95,31 @@ public class TestDataInitializer implements CommandLineRunner {
         // 3. KREIRANJE VIDEA
         if (videoRepository.count() == 0) {
             Video video1 = new Video();
-            video1.setTitle("Uvod u Spring Boot");
-            video1.setDescription("Naučite osnove Spring Boot frameworka za 10 minuta.");
-            video1.setVideoUrl("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
-            video1.setThumbnailUrl("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Big_buck_bunny_poster_big.jpg/1200px-Big_buck_bunny_poster_big.jpg");
-            video1.setDuration(600);
+            video1.setTitle("Video1");
+            video1.setDescription("Opis videa 1");
+            video1.setVideoUrl("video1.mp4");
+            video1.setThumbnailUrl("image_3.jpg");
+            video1.setDuration(11);
             video1.setViewCount(150L);
             video1.setOwner(user1);
             videoService.save(video1);
 
             Video video2 = new Video();
-            video2.setTitle("Angular za početnike");
-            video2.setDescription("Kompletna Angular aplikacija od nule. Pravimo Frontend.");
-            video2.setVideoUrl("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4");
-            video2.setThumbnailUrl("https://upload.wikimedia.org/wikipedia/commons/0/0c/Elephants_Dream_poster_niels.jpg");
-            video2.setDuration(300);
+            video2.setTitle("Alen i Indira");
+            video2.setDescription("Muzikaaa");
+            video2.setVideoUrl("alen.mp4");
+            video2.setThumbnailUrl("alen.jpg");
+            video2.setDuration(200);
             video2.setViewCount(1250L);
             video2.setOwner(user1);
             videoService.save(video2);
 
             Video video3 = new Video();
-            video3.setTitle("PostgreSQL baze podataka");
-            video3.setDescription("Kako efikasno koristiti PostgreSQL i optimizovati upite.");
-            video3.setVideoUrl("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4");
-            video3.setThumbnailUrl("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg");
-            video3.setDuration(450);
+            video3.setTitle("Video neki tamo");
+            video3.setDescription("Ma nekakav opis hahah");
+            video3.setVideoUrl("video3.mp4");
+            video3.setThumbnailUrl("test.jpg");
+            video3.setDuration(10);
             video3.setViewCount(85L);
             video3.setOwner(user2);
             videoService.save(video3);
