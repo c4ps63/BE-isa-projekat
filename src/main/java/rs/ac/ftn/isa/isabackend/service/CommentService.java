@@ -58,7 +58,6 @@ public class CommentService {
     @Transactional
     @CacheEvict(
             value = "commentsByVideo",
-            key = "#videoId + '-' + 0 + '-' + 20",
             allEntries = true
     )
     public Comment createComment(Long videoId, String text, String username) {
