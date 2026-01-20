@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import rs.ac.ftn.isa.isabackend.model.Video;
+import java.util.List;
 
 @Repository
 public interface VideoRepository extends JpaRepository<Video, Long> {
@@ -18,4 +19,6 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Modifying
     @Query("UPDATE Video v SET v.viewCount = v.viewCount + 1 WHERE v.id = :videoId")
     void incrementViewCount(@Param("videoId") Long videoId);
+
+    List<Video> findByLatitudeBetweenAndLongitudeBetween(Double minLat, Double maxLat, Double minLng, Double maxLng);
 }

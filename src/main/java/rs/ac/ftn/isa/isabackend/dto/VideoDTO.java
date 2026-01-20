@@ -17,6 +17,8 @@ public class VideoDTO {
     private LocalDateTime uploadedAt;
     private UserDTO owner;
     private String location;
+    private Double latitude;
+    private Double longitude;
     private Set<String> tags;
 
     public VideoDTO() {
@@ -34,6 +36,8 @@ public class VideoDTO {
         this.uploadedAt = video.getUploadedAt();
         this.owner = new UserDTO(video.getOwner());
         this.location = video.getLocation();
+        this.latitude = video.getLatitude();
+        this.longitude = video.getLongitude();
         this.tags = video.getTags();
     }
 
@@ -125,6 +129,14 @@ public class VideoDTO {
     public void setLocation(String location) {
         this.location = location;
     }
+
+    public Double getLatitude() { return latitude; }
+
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
 
     public Set<String> getTags() {
         return tags;
