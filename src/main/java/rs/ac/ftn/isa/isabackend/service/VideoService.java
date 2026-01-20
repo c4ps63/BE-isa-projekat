@@ -22,17 +22,23 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
+import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+
 @Service
 public class VideoService {
 
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
+    private final TileService tileService;
     private final Path rootLocation = Paths.get("uploads");
 
     @Autowired
-    public VideoService(VideoRepository videoRepository, UserRepository userRepository) {
+    public VideoService(VideoRepository videoRepository, UserRepository userRepository, TileService tileService) {
         this.videoRepository = videoRepository;
         this.userRepository = userRepository;
+        this.tileService = tileService;
     }
 
     public Page<Video> findAll(int page, int size) {
@@ -70,7 +76,7 @@ public class VideoService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public VideoDTO uploadVideoWithUser(String title, String description, MultipartFile videoFile, MultipartFile thumbnailFile, String username, Integer duration) throws IOException {
+    public VideoDTO uploadVideoWithUser(String title, String description, MultipartFile videoFile, MultipartFile thumbnailFile, String username, Integer duration, Double latitude, Double longitude) throws IOException {
 
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Korisnik nije pronađen! (Tražen username: " + username + ")"));
@@ -94,6 +100,8 @@ public class VideoService {
         video.setUploadedAt(LocalDateTime.now());
         video.setViewCount(0L);
         video.setDuration(duration);
+        video.setLatitude(latitude);
+        video.setLongitude(longitude);
 
         Video savedVideo = videoRepository.save(video);
 
@@ -104,5 +112,29 @@ public class VideoService {
     public byte[] getThumbnail(String filename) throws IOException {
         Path destination = this.rootLocation.resolve(filename);
         return Files.readAllBytes(destination);
+    }
+
+    public List<VideoDTO> getVideosInView(Double minLat, Double maxLat, Double minLng, Double maxLng) {
+        if (minLat == null || maxLat == null || minLng == null || maxLng == null) {
+            return new ArrayList<>();
+        }
+
+        List<Video> videos = videoRepository.findByLatitudeBetweenAndLongitudeBetween(minLat, maxLat, minLng, maxLng);
+
+        return videos.stream()
+                .map(VideoDTO::new)
+                .collect(Collectors.toList());
+    }
+
+    public List<VideoDTO> getVideosByTile(int z, int x, int y) {
+        TileService.BoundingBox box = tileService.getBoundingBox(x, y, z);
+
+        List<Video> videos = videoRepository.findByLatitudeBetweenAndLongitudeBetween(
+                box.minLat, box.maxLat, box.minLng, box.maxLng
+        );
+
+        return videos.stream()
+                .map(VideoDTO::new)
+                .collect(Collectors.toList());
     }
 }
