@@ -33,9 +33,10 @@ public class VideoController {
     @GetMapping
     public ResponseEntity<Page<VideoDTO>> getAllVideos(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "ALL") String filter) {
 
-        Page<Video> videos = videoService.findAll(page, size);
+        Page<Video> videos = videoService.findAll(page, size, filter);
         Page<VideoDTO> videoDTOs = videos.map(VideoDTO::new);
         return ResponseEntity.ok(videoDTOs);
     }

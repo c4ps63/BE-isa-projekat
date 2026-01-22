@@ -50,9 +50,19 @@ public class VideoService {
         this.tileService = tileService;
     }
 
-    public Page<Video> findAll(int page, int size) {
+    public Page<Video> findAll(int page, int size, String filter) {
         Pageable pageable = PageRequest.of(page, size);
-        return videoRepository.findAllByOrderByUploadedAtDesc(pageable);
+        LocalDateTime cutoffDate;
+
+        if ("LAST_30_DAYS".equalsIgnoreCase(filter)) {
+            cutoffDate = LocalDateTime.now().minusDays(30);
+            return videoRepository.findByUploadedAtAfterOrderByUploadedAtDesc(cutoffDate, pageable);
+        } else if ("THIS_YEAR".equalsIgnoreCase(filter)) {
+            cutoffDate = LocalDateTime.now().withDayOfYear(1).toLocalDate().atStartOfDay();
+            return videoRepository.findByUploadedAtAfterOrderByUploadedAtDesc(cutoffDate, pageable);
+        } else {
+            return videoRepository.findAllByOrderByUploadedAtDesc(pageable);
+        }
     }
 
     public Optional<Video> findById(Long id) {
