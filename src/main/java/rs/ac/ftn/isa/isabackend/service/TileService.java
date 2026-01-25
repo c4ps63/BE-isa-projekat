@@ -14,6 +14,15 @@ public class TileService {
         return Math.toDegrees(Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))));
     }
 
+    public int getTileX(double lon, int z) {
+        return (int) Math.floor((lon + 180.0) / 360.0 * (1 << z));
+    }
+
+    public int getTileY(double lat, int z) {
+        double latRad = Math.toRadians(lat);
+        return (int) Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * (1 << z));
+    }
+
     public static class BoundingBox {
         public double minLat;
         public double maxLat;

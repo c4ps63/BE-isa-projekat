@@ -2,6 +2,7 @@ package rs.ac.ftn.isa.isabackend.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -44,10 +45,14 @@ public class VideoService {
     private final Path rootLocation = Paths.get("uploads");
 
     @Autowired
-    public VideoService(VideoRepository videoRepository, UserRepository userRepository, TileService tileService) {
+    private CacheManager cacheManager;
+
+    @Autowired
+    public VideoService(VideoRepository videoRepository, UserRepository userRepository, TileService tileService, CacheManager cacheManager) {
         this.videoRepository = videoRepository;
         this.userRepository = userRepository;
         this.tileService = tileService;
+        this.cacheManager = cacheManager;
     }
 
     public Page<Video> findAll(int page, int size, String filter) {
@@ -137,7 +142,29 @@ public class VideoService {
 
         Video savedVideo = videoRepository.save(video);
 
+        if (finalLat != 0.0 && finalLon != 0.0) {
+            updateMapCache(finalLat, finalLon);
+        }
+
         return new VideoDTO(savedVideo);
+    }
+
+    private void updateMapCache(Double lat, Double lon) {
+        try {
+            for (int z = 1; z <= 18; z++) {
+                int x = tileService.getTileX(lon, z);
+                int y = tileService.getTileY(lat, z);
+
+                String cacheKey = z + "-" + x + "-" + y;
+
+                if (cacheManager.getCache("mapTiles") != null) {
+                    cacheManager.getCache("mapTiles").evict(cacheKey);
+                }
+            }
+            System.out.println("CACHE: Obrisani tile-ovi za novu lokaciju videa.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Cacheable("thumbnails")
@@ -158,7 +185,9 @@ public class VideoService {
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = "mapTiles", key = "#z + '-' + #x + '-' + #y")
     public List<VideoDTO> getVideosByTile(int z, int x, int y) {
+        System.out.println("Podaci iz baze za tile " + z + "/" + x + "/" + y);
         TileService.BoundingBox box = tileService.getBoundingBox(x, y, z);
 
         List<Video> videos = videoRepository.findByLatitudeBetweenAndLongitudeBetween(
