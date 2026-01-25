@@ -33,9 +33,10 @@ public class VideoController {
     @GetMapping
     public ResponseEntity<Page<VideoDTO>> getAllVideos(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "ALL") String filter) {
 
-        Page<Video> videos = videoService.findAll(page, size);
+        Page<Video> videos = videoService.findAll(page, size, filter);
         Page<VideoDTO> videoDTOs = videos.map(VideoDTO::new);
         return ResponseEntity.ok(videoDTOs);
     }
@@ -87,9 +88,9 @@ public class VideoController {
     public ResponseEntity<?> uploadVideo(
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
-            @RequestParam(value = "location", required = false) String location,
-            @RequestParam(value = "latitude", required = false) Double latitude,
-            @RequestParam(value = "longitude", required = false) Double longitude,
+            @RequestParam("street") String street,
+            @RequestParam("number") String number,
+            @RequestParam("city") String city,
             @RequestParam(value = "tags", required = false) String tags,
             @RequestParam("duration") Integer duration,
             @RequestParam("videoFile") MultipartFile videoFile,
@@ -106,7 +107,7 @@ public class VideoController {
 
             String username = principal.getName();
 
-            VideoDTO savedVideo = videoService.uploadVideoWithUser(title, description, videoFile, thumbnailFile, username, duration, latitude, longitude);
+            VideoDTO savedVideo = videoService.uploadVideoWithUser(title, description, videoFile, thumbnailFile, username, duration, street, number, city);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(savedVideo);
 

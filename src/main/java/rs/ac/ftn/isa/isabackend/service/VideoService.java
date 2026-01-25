@@ -2,6 +2,7 @@ package rs.ac.ftn.isa.isabackend.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +14,15 @@ import rs.ac.ftn.isa.isabackend.model.User;
 import rs.ac.ftn.isa.isabackend.model.Video;
 import rs.ac.ftn.isa.isabackend.repository.UserRepository;
 import rs.ac.ftn.isa.isabackend.repository.VideoRepository;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,15 +45,29 @@ public class VideoService {
     private final Path rootLocation = Paths.get("uploads");
 
     @Autowired
-    public VideoService(VideoRepository videoRepository, UserRepository userRepository, TileService tileService) {
+    private CacheManager cacheManager;
+
+    @Autowired
+    public VideoService(VideoRepository videoRepository, UserRepository userRepository, TileService tileService, CacheManager cacheManager) {
         this.videoRepository = videoRepository;
         this.userRepository = userRepository;
         this.tileService = tileService;
+        this.cacheManager = cacheManager;
     }
 
-    public Page<Video> findAll(int page, int size) {
+    public Page<Video> findAll(int page, int size, String filter) {
         Pageable pageable = PageRequest.of(page, size);
-        return videoRepository.findAllByOrderByUploadedAtDesc(pageable);
+        LocalDateTime cutoffDate;
+
+        if ("LAST_30_DAYS".equalsIgnoreCase(filter)) {
+            cutoffDate = LocalDateTime.now().minusDays(30);
+            return videoRepository.findByUploadedAtAfterOrderByUploadedAtDesc(cutoffDate, pageable);
+        } else if ("THIS_YEAR".equalsIgnoreCase(filter)) {
+            cutoffDate = LocalDateTime.now().withDayOfYear(1).toLocalDate().atStartOfDay();
+            return videoRepository.findByUploadedAtAfterOrderByUploadedAtDesc(cutoffDate, pageable);
+        } else {
+            return videoRepository.findAllByOrderByUploadedAtDesc(pageable);
+        }
     }
 
     public Optional<Video> findById(Long id) {
@@ -76,7 +100,7 @@ public class VideoService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public VideoDTO uploadVideoWithUser(String title, String description, MultipartFile videoFile, MultipartFile thumbnailFile, String username, Integer duration, Double latitude, Double longitude) throws IOException {
+    public VideoDTO uploadVideoWithUser(String title, String description, MultipartFile videoFile, MultipartFile thumbnailFile, String username, Integer duration, String street, String number, String city) throws IOException {
 
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Korisnik nije pronađen! (Tražen username: " + username + ")"));
@@ -91,6 +115,18 @@ public class VideoService {
         Files.copy(videoFile.getInputStream(), this.rootLocation.resolve(videoFileName));
         Files.copy(thumbnailFile.getInputStream(), this.rootLocation.resolve(thumbFileName));
 
+        Double finalLat = 0.0;
+        Double finalLon = 0.0;
+
+        Double[] coords = getCoordinatesFromAddress(street, number, city);
+
+        if (coords != null) {
+            finalLat = coords[0];
+            finalLon = coords[1];
+        } else {
+            System.out.println("Upozorenje: Nije moguće pronaći koordinate za datu adresu.");
+        }
+
         Video video = new Video();
         video.setTitle(title);
         video.setDescription(description);
@@ -100,12 +136,35 @@ public class VideoService {
         video.setUploadedAt(LocalDateTime.now());
         video.setViewCount(0L);
         video.setDuration(duration);
-        video.setLatitude(latitude);
-        video.setLongitude(longitude);
+        video.setLatitude(finalLat);
+        video.setLongitude(finalLon);
+        video.setLocation(street + " " + number + ", " + city);
 
         Video savedVideo = videoRepository.save(video);
 
+        if (finalLat != 0.0 && finalLon != 0.0) {
+            updateMapCache(finalLat, finalLon);
+        }
+
         return new VideoDTO(savedVideo);
+    }
+
+    private void updateMapCache(Double lat, Double lon) {
+        try {
+            for (int z = 1; z <= 18; z++) {
+                int x = tileService.getTileX(lon, z);
+                int y = tileService.getTileY(lat, z);
+
+                String cacheKey = z + "-" + x + "-" + y;
+
+                if (cacheManager.getCache("mapTiles") != null) {
+                    cacheManager.getCache("mapTiles").evict(cacheKey);
+                }
+            }
+            System.out.println("CACHE: Obrisani tile-ovi za novu lokaciju videa.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Cacheable("thumbnails")
@@ -126,7 +185,9 @@ public class VideoService {
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = "mapTiles", key = "#z + '-' + #x + '-' + #y")
     public List<VideoDTO> getVideosByTile(int z, int x, int y) {
+        System.out.println("Podaci iz baze za tile " + z + "/" + x + "/" + y);
         TileService.BoundingBox box = tileService.getBoundingBox(x, y, z);
 
         List<Video> videos = videoRepository.findByLatitudeBetweenAndLongitudeBetween(
@@ -136,5 +197,35 @@ public class VideoService {
         return videos.stream()
                 .map(VideoDTO::new)
                 .collect(Collectors.toList());
+    }
+
+    private Double[] getCoordinatesFromAddress(String street, String number, String city) {
+        try {
+            String addressQuery = street + " " + number + ", " + city;
+            String encodedAddress = URLEncoder.encode(addressQuery, StandardCharsets.UTF_8);
+            String url = "https://nominatim.openstreetmap.org/search?q=" + encodedAddress + "&format=json&limit=1";
+
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("User-Agent", "ISABackendProjekat/1.0")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootArray = mapper.readTree(response.body());
+
+            if (rootArray.isArray() && !rootArray.isEmpty()) {
+                JsonNode firstResult = rootArray.get(0);
+                Double lat = firstResult.get("lat").asDouble();
+                Double lon = firstResult.get("lon").asDouble();
+                return new Double[]{lat, lon};
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

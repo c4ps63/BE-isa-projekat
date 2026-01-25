@@ -8,13 +8,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import rs.ac.ftn.isa.isabackend.model.Video;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
 public interface VideoRepository extends JpaRepository<Video, Long> {
     Page<Video> findAllByOrderByUploadedAtDesc(Pageable pageable);
-
     Page<Video> findByOwnerIdOrderByUploadedAtDesc(Long ownerId, Pageable pageable);
+    Page<Video> findByUploadedAtAfterOrderByUploadedAtDesc(LocalDateTime date, Pageable pageable);
 
     @Modifying
     @Query("UPDATE Video v SET v.viewCount = v.viewCount + 1 WHERE v.id = :videoId")
