@@ -2,15 +2,18 @@ package rs.ac.ftn.isa.isabackend.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import rs.ac.ftn.isa.isabackend.model.Comment;
 import rs.ac.ftn.isa.isabackend.model.Role;
 import rs.ac.ftn.isa.isabackend.model.User;
 import rs.ac.ftn.isa.isabackend.model.Video;
+import rs.ac.ftn.isa.isabackend.model.Location;
 import rs.ac.ftn.isa.isabackend.repository.RoleRepository;
 import rs.ac.ftn.isa.isabackend.repository.UserRepository;
 import rs.ac.ftn.isa.isabackend.repository.VideoRepository;
+import rs.ac.ftn.isa.isabackend.repository.LocationRepository;
 import rs.ac.ftn.isa.isabackend.service.CommentService;
 import rs.ac.ftn.isa.isabackend.service.VideoService;
 
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
+@Order(1)
 public class TestDataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
@@ -26,15 +30,23 @@ public class TestDataInitializer implements CommandLineRunner {
     private final VideoRepository videoRepository;
     private final CommentService commentService;
     private final PasswordEncoder passwordEncoder;
+    private final LocationRepository locationRepository;
 
     @Autowired
-    public TestDataInitializer(UserRepository userRepository, RoleRepository roleRepository, VideoService videoService, VideoRepository videoRepository, CommentService commentService, PasswordEncoder passwordEncoder) {
+    public TestDataInitializer(UserRepository userRepository,
+                               RoleRepository roleRepository,
+                               VideoService videoService,
+                               VideoRepository videoRepository,
+                               CommentService commentService,
+                               PasswordEncoder passwordEncoder,
+                               LocationRepository locationRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.videoService = videoService;
         this.videoRepository = videoRepository;
         this.commentService = commentService;
         this.passwordEncoder = passwordEncoder;
+        this.locationRepository = locationRepository;
     }
 
     @Override
@@ -53,7 +65,6 @@ public class TestDataInitializer implements CommandLineRunner {
         List<Role> roles = roleRepository.findByName("ROLE_USER");
 
         // 2. KREIRANJE KORISNIKA
-
         User user1;
         Optional<User> user1Opt = userRepository.findByUsername("marko");
         if (user1Opt.isEmpty()) {
@@ -102,16 +113,22 @@ public class TestDataInitializer implements CommandLineRunner {
             video1.setDuration(11);
             video1.setViewCount(150L);
             video1.setOwner(user1);
+            video1.setLatitude(45.2461);
+            video1.setLongitude(19.8517);
+            video1.setLocation("FTN Novi Sad");
             videoService.save(video1);
 
             Video video2 = new Video();
             video2.setTitle("Alen i Indira");
             video2.setDescription("Muzikaaa");
             video2.setVideoUrl("alen.mp4");
-            video2.setThumbnailUrl("alen.jpg");
+            video2.setThumbnailUrl("image_4.jpg");
             video2.setDuration(200);
             video2.setViewCount(1250L);
             video2.setOwner(user1);
+            video2.setLatitude(45.2552);
+            video2.setLongitude(19.8450);
+            video2.setLocation("Centar Novog Sada");
             videoService.save(video2);
 
             Video video3 = new Video();
@@ -122,6 +139,9 @@ public class TestDataInitializer implements CommandLineRunner {
             video3.setDuration(10);
             video3.setViewCount(85L);
             video3.setOwner(user2);
+            video3.setLatitude(45.2345);
+            video3.setLongitude(19.8350);
+            video3.setLocation("Štrand");
             videoService.save(video3);
 
             // Komentari
@@ -138,6 +158,20 @@ public class TestDataInitializer implements CommandLineRunner {
             commentService.save(comment2);
 
             System.out.println("--- Test podaci (Videi i Komentari) uspesno dodati! ---");
+        }
+
+        // 4. KREIRANJE LOKACIJA
+        initLocations();
+    }
+
+    private void initLocations() {
+        if (locationRepository.count() == 0) {
+            Location l1 = new Location("FTN Novi Sad", 45.2461, 19.8517);
+            Location l2 = new Location("Dom Zdravlja Liman", 45.2389, 19.8425);
+
+            locationRepository.save(l1);
+            locationRepository.save(l2);
+            System.out.println("Test lokacije uspesno ubacene!");
         }
     }
 }
