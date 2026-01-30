@@ -108,9 +108,10 @@ public class VideoController {
             @RequestParam Double maxLat,
             @RequestParam Double minLng,
             @RequestParam Double maxLng,
-            @RequestParam int zoom) {
+            @RequestParam int zoom,
+            @RequestParam(defaultValue = "ALL") String filter) {
 
-        return ResponseEntity.ok(videoService.getClusteredVideosByViewport(minLat, maxLat, minLng, maxLng, zoom));
+        return ResponseEntity.ok(videoService.getClusteredVideosByViewport(minLat, maxLat, minLng, maxLng, zoom, filter));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

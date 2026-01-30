@@ -269,15 +269,26 @@ public class VideoService {
      * Svi videi u viewport-u se uvijek prikazu - pojedinacno ili kao klasteri.
      */
     public List<TileClusterDTO> getClusteredVideosByViewport(
-            Double minLat, Double maxLat, Double minLng, Double maxLng, int zoom) {
+            Double minLat, Double maxLat, Double minLng, Double maxLng, int zoom, String filter) {
 
-        System.out.println("Viewport clustered: zoom=" + zoom + ", bounds=[" +
+        System.out.println("Viewport clustered: zoom=" + zoom + ", filter=" + filter + ", bounds=[" +
                 minLat + "," + maxLat + "," + minLng + "," + maxLng + "]");
 
-        // Ucitaj SVE videe u viewport-u
-        List<Video> allVideos = videoRepository.findByLatitudeBetweenAndLongitudeBetween(
-                minLat, maxLat, minLng, maxLng
-        );
+        // Ucitaj videe u viewport-u sa primijenjenim filterom
+        List<Video> allVideos;
+
+        if ("LAST_30_DAYS".equalsIgnoreCase(filter)) {
+            LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
+            allVideos = videoRepository.findByLatitudeBetweenAndLongitudeBetweenAndUploadedAtAfter(
+                    minLat, maxLat, minLng, maxLng, cutoffDate);
+        } else if ("THIS_YEAR".equalsIgnoreCase(filter)) {
+            LocalDateTime cutoffDate = LocalDateTime.now().withDayOfYear(1).toLocalDate().atStartOfDay();
+            allVideos = videoRepository.findByLatitudeBetweenAndLongitudeBetweenAndUploadedAtAfter(
+                    minLat, maxLat, minLng, maxLng, cutoffDate);
+        } else {
+            allVideos = videoRepository.findByLatitudeBetweenAndLongitudeBetween(
+                    minLat, maxLat, minLng, maxLng);
+        }
 
         if (allVideos.isEmpty()) {
             return new ArrayList<>();

@@ -42,4 +42,15 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
             @Param("maxLat") Double maxLat,
             @Param("minLng") Double minLng,
             @Param("maxLng") Double maxLng);
+
+    // Pronalazi video snimke u viewport-u sa vremenskim filterom
+    @Query("SELECT v FROM Video v WHERE v.latitude BETWEEN :minLat AND :maxLat " +
+           "AND v.longitude BETWEEN :minLng AND :maxLng " +
+           "AND v.uploadedAt >= :uploadedAfter")
+    List<Video> findByLatitudeBetweenAndLongitudeBetweenAndUploadedAtAfter(
+            @Param("minLat") Double minLat,
+            @Param("maxLat") Double maxLat,
+            @Param("minLng") Double minLng,
+            @Param("maxLng") Double maxLng,
+            @Param("uploadedAfter") LocalDateTime uploadedAfter);
 }

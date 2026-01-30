@@ -47,7 +47,7 @@ public class BulkDataInitializer implements CommandLineRunner {
             String existingVideoFile = "video1.mp4";
             String existingImageFile = "image_4.jpg";
 
-            for (int i = 0; i < 1; i++) {
+            for (int i = 0; i < 5000; i++) {
                 Video v = new Video();
                 v.setTitle("Bulk Video #" + (i + 1));
                 v.setDescription("Automatski generisan video za testiranje performansi mape.");
