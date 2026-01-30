@@ -22,5 +22,10 @@ public class SchedulerService {
             cacheManager.getCache("mapTiles").clear();
             System.out.println("SCHEDULER: Keš 'mapTiles' je uspešno obrisan.");
         }
+
+        if (cacheManager.getCache("mapTilesClustered") != null) {
+            cacheManager.getCache("mapTilesClustered").clear();
+            System.out.println("SCHEDULER: Keš 'mapTilesClustered' je uspešno obrisan.");
+        }
     }
 }
