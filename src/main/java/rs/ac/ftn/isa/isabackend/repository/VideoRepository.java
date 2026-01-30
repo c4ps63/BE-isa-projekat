@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import rs.ac.ftn.isa.isabackend.model.Video;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface VideoRepository extends JpaRepository<Video, Long> {
@@ -22,4 +23,23 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     void incrementViewCount(@Param("videoId") Long videoId);
 
     List<Video> findByLatitudeBetweenAndLongitudeBetween(Double minLat, Double maxLat, Double minLng, Double maxLng);
+
+    // Pronalazi reprezentativni video (sa najvise pregleda) u datom bounding box-u
+    @Query("SELECT v FROM Video v WHERE v.latitude BETWEEN :minLat AND :maxLat " +
+           "AND v.longitude BETWEEN :minLng AND :maxLng " +
+           "ORDER BY v.viewCount DESC LIMIT 1")
+    Optional<Video> findTopByBoundingBoxOrderByViewCountDesc(
+            @Param("minLat") Double minLat,
+            @Param("maxLat") Double maxLat,
+            @Param("minLng") Double minLng,
+            @Param("maxLng") Double maxLng);
+
+    // Broji video snimke u datom bounding box-u
+    @Query("SELECT COUNT(v) FROM Video v WHERE v.latitude BETWEEN :minLat AND :maxLat " +
+           "AND v.longitude BETWEEN :minLng AND :maxLng")
+    Long countByBoundingBox(
+            @Param("minLat") Double minLat,
+            @Param("maxLat") Double maxLat,
+            @Param("minLng") Double minLng,
+            @Param("maxLng") Double maxLng);
 }

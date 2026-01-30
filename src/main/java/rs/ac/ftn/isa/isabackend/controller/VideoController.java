@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import rs.ac.ftn.isa.isabackend.dto.VideoDTO;
+import rs.ac.ftn.isa.isabackend.dto.TileClusterDTO;
 import rs.ac.ftn.isa.isabackend.model.Video;
 import rs.ac.ftn.isa.isabackend.service.VideoService;
 
@@ -81,6 +82,35 @@ public class VideoController {
             @PathVariable int y) {
 
         return ResponseEntity.ok(videoService.getVideosByTile(z, x, y));
+    }
+
+    /**
+     * Vraca klasterizirane video snimke za prikaz na mapi.
+     * Na visokom zoom-u vraca pojedinacne video snimke,
+     * na nizem zoom-u vraca grupisane klastere sa reprezentativnim videom.
+     */
+    @GetMapping("/tile-clustered/{z}/{x}/{y}")
+    public ResponseEntity<List<TileClusterDTO>> getClusteredVideosByTile(
+            @PathVariable int z,
+            @PathVariable int x,
+            @PathVariable int y) {
+
+        return ResponseEntity.ok(videoService.getClusteredVideosByTile(z, x, y));
+    }
+
+    /**
+     * Vraca klasterizirane video snimke za dati viewport.
+     * Garantuje da se svi videi u viewport-u prikazu - bilo kao pojedinacni ili kao klasteri.
+     */
+    @GetMapping("/viewport-clustered")
+    public ResponseEntity<List<TileClusterDTO>> getClusteredVideosByViewport(
+            @RequestParam Double minLat,
+            @RequestParam Double maxLat,
+            @RequestParam Double minLng,
+            @RequestParam Double maxLng,
+            @RequestParam int zoom) {
+
+        return ResponseEntity.ok(videoService.getClusteredVideosByViewport(minLat, maxLat, minLng, maxLng, zoom));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
