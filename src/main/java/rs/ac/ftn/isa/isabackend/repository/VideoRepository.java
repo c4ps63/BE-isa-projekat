@@ -43,6 +43,9 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
             @Param("minLng") Double minLng,
             @Param("maxLng") Double maxLng);
 
+    // Pronalazi videe sa nekompresovanim thumbnailima starijim od datuma
+    List<Video> findByThumbnailCompressedFalseAndUploadedAtBefore(LocalDateTime date);
+
     // Pronalazi video snimke u viewport-u sa vremenskim filterom
     @Query("SELECT v FROM Video v WHERE v.latitude BETWEEN :minLat AND :maxLat " +
            "AND v.longitude BETWEEN :minLng AND :maxLng " +
