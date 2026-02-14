@@ -33,6 +33,9 @@ public class Video {
 
     private String thumbnailUrl;
 
+    @Column(nullable = false)
+    private boolean thumbnailCompressed = false;
+
     private Integer duration; // u sekundama
 
     private String location;
