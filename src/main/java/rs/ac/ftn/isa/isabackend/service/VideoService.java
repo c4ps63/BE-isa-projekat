@@ -78,14 +78,12 @@ public class VideoService {
         return videoRepository.findById(id);
     }
 
-    // NOVA METODA: Logika za simulaciju streaming-a
     public VideoDTO getVideoForPlayback(Long id) {
         Video video = videoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Video not found"));
 
         VideoDTO dto = new VideoDTO(video);
 
-        // Ako NIJE zakazan ili nema datum, ponasa se kao obican video (VOD)
         if (Boolean.FALSE.equals(video.getIsScheduled()) || video.getScheduledDateTime() == null) {
             dto.setStreamingStatus("VOD");
             dto.setCurrentOffset(0L);
@@ -95,21 +93,17 @@ public class VideoService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime start = video.getScheduledDateTime();
 
-        // 1. Video jos nije poceo
         if (now.isBefore(start)) {
             dto.setStreamingStatus("WAITING");
             dto.setCurrentOffset(0L);
             return dto;
         }
 
-        // 2. Video je poceo - racunamo koliko sekundi je proslo
         long secondsSinceStart = ChronoUnit.SECONDS.between(start, now);
 
-        // 3. Video se zavrsio? -> Pretvaramo ga u VOD (Video na zahtev)
-        // Ovo omogucava da posle live-a ostane kao obican video
         if (video.getDuration() != null && secondsSinceStart > video.getDuration()) {
-            dto.setStreamingStatus("VOD"); // VISE NIJE "ENDED", SADA JE "VOD"
-            dto.setCurrentOffset(0L);      // Resetujemo offset da krene od pocetka
+            dto.setStreamingStatus("VOD");
+            dto.setCurrentOffset(0L);
         } else {
             // 4. Video je LIVE
             dto.setStreamingStatus("LIVE");

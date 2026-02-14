@@ -14,8 +14,8 @@ import rs.ac.ftn.isa.isabackend.model.Video;
 import rs.ac.ftn.isa.isabackend.service.VideoService;
 
 import java.io.IOException;
-import java.time.LocalDateTime; // DODATO
-import java.time.format.DateTimeFormatter; // DODATO
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.Set;
 import java.security.Principal;
@@ -46,10 +46,9 @@ public class VideoController {
 
     @GetMapping("/{id}")
     public ResponseEntity<VideoDTO> getVideoById(@PathVariable Long id) {
-        // IZMENJENO: Pozivamo metodu koja proverava zakazivanje
         try {
             VideoDTO videoDTO = videoService.getVideoForPlayback(id);
-            videoService.incrementViewCount(id); // I dalje brojimo preglede
+            videoService.incrementViewCount(id);
             return ResponseEntity.ok(videoDTO);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -116,7 +115,6 @@ public class VideoController {
         return ResponseEntity.ok(videoService.getClusteredVideosByViewport(minLat, maxLat, minLng, maxLng, zoom, filter));
     }
 
-    // IZMENJENA METODA: Dodati parametri za zakazivanje
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ROLE_USER')")
     public ResponseEntity<?> uploadVideo(
