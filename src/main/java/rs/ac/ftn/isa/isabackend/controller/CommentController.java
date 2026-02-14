@@ -2,13 +2,17 @@ package rs.ac.ftn.isa.isabackend.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import rs.ac.ftn.isa.isabackend.dto.CommentDTO;
 import rs.ac.ftn.isa.isabackend.model.Comment;
 import rs.ac.ftn.isa.isabackend.service.CommentService;
+import rs.ac.ftn.isa.isabackend.service.CommentRateLimiterService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.Map;
 
 
 @RestController
@@ -16,10 +20,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 public class CommentController {
 
     private final CommentService commentService;
+    private final CommentRateLimiterService rateLimiterService;
 
     @Autowired
-    public CommentController(CommentService commentService) {
+    public CommentController(CommentService commentService, CommentRateLimiterService rateLimiterService) {
         this.commentService = commentService;
+        this.rateLimiterService = rateLimiterService;
     }
 
     @GetMapping("/video/{videoId}")
@@ -34,9 +40,18 @@ public class CommentController {
     }
 
     @PostMapping
-    public ResponseEntity<CommentDTO> createComment(@RequestBody CommentDTO commentDTO) {
+    public ResponseEntity<?> createComment(@RequestBody CommentDTO commentDTO) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
+
+        if (!rateLimiterService.isAllowed(username)) {
+            int remaining = rateLimiterService.getRemainingComments(username);
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of(
+                            "error", "Prekoračili ste limit od 60 komentara po satu.",
+                            "remainingComments", remaining
+                    ));
+        }
 
         Comment comment = commentService.createComment(commentDTO.getVideoId(), commentDTO.getText(), username);
         return ResponseEntity.ok(new CommentDTO(comment));
