@@ -67,6 +67,12 @@ public class Video {
     @OneToMany(mappedBy = "video", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Like> likes = new HashSet<>();
 
+    @Column(name = "is_scheduled")
+    private Boolean isScheduled = false;
+
+    @Column(name = "scheduled_date_time")
+    private LocalDateTime scheduledDateTime;
+
     public Long getLikeCount() {
         return (long) likes.size();
     }
