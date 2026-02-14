@@ -20,6 +20,10 @@ public class VideoDTO {
     private Double latitude;
     private Double longitude;
     private Set<String> tags;
+    private Boolean isScheduled;
+    private LocalDateTime scheduledDateTime;
+    private Long currentOffset;
+    private String streamingStatus;
 
     public VideoDTO() {
     }
@@ -39,6 +43,12 @@ public class VideoDTO {
         this.latitude = video.getLatitude();
         this.longitude = video.getLongitude();
         this.tags = video.getTags();
+
+        this.isScheduled = video.getIsScheduled() != null ? video.getIsScheduled() : false;
+        this.scheduledDateTime = video.getScheduledDateTime();
+
+        this.currentOffset = 0L;
+        this.streamingStatus = "VOD";
     }
 
     // Getters and Setters
@@ -145,4 +155,16 @@ public class VideoDTO {
     public void setTags(Set<String> tags) {
         this.tags = tags;
     }
+
+    public Boolean getIsScheduled() { return isScheduled; }
+    public void setIsScheduled(Boolean scheduled) { isScheduled = scheduled; }
+
+    public LocalDateTime getScheduledDateTime() { return scheduledDateTime; }
+    public void setScheduledDateTime(LocalDateTime scheduledDateTime) { this.scheduledDateTime = scheduledDateTime; }
+
+    public Long getCurrentOffset() { return currentOffset; }
+    public void setCurrentOffset(Long currentOffset) { this.currentOffset = currentOffset; }
+
+    public String getStreamingStatus() { return streamingStatus; }
+    public void setStreamingStatus(String streamingStatus) { this.streamingStatus = streamingStatus; }
 }
