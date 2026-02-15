@@ -36,6 +36,9 @@ public class Video {
     @Column(nullable = false)
     private boolean thumbnailCompressed = false;
 
+    @Enumerated(EnumType.STRING)
+    private TranscodingStatus transcodingStatus = TranscodingStatus.PENDING;
+
     private Integer duration; // u sekundama
 
     private String location;

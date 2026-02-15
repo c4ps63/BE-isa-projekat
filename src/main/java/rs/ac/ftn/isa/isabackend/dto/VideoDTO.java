@@ -2,6 +2,8 @@ package rs.ac.ftn.isa.isabackend.dto;
 
 import rs.ac.ftn.isa.isabackend.model.Video;
 
+import rs.ac.ftn.isa.isabackend.model.TranscodingStatus;
+
 import java.time.LocalDateTime;
 import java.util.Set;
 
@@ -20,6 +22,7 @@ public class VideoDTO {
     private Double latitude;
     private Double longitude;
     private Set<String> tags;
+    private TranscodingStatus transcodingStatus;
     private Boolean isScheduled;
     private LocalDateTime scheduledDateTime;
     private Long currentOffset;
@@ -43,6 +46,7 @@ public class VideoDTO {
         this.latitude = video.getLatitude();
         this.longitude = video.getLongitude();
         this.tags = video.getTags();
+        this.transcodingStatus = video.getTranscodingStatus();
 
         this.isScheduled = video.getIsScheduled() != null ? video.getIsScheduled() : false;
         this.scheduledDateTime = video.getScheduledDateTime();
@@ -156,6 +160,13 @@ public class VideoDTO {
         this.tags = tags;
     }
 
+    public TranscodingStatus getTranscodingStatus() {
+        return transcodingStatus;
+    }
+
+    public void setTranscodingStatus(TranscodingStatus transcodingStatus) {
+        this.transcodingStatus = transcodingStatus;
+    }
     public Boolean getIsScheduled() { return isScheduled; }
     public void setIsScheduled(Boolean scheduled) { isScheduled = scheduled; }
 
