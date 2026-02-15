@@ -30,6 +30,15 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     public void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
 
+        String path = request.getRequestURI();
+        if (path.startsWith("/actuator") ||
+                path.startsWith("/api/auth") ||
+                path.startsWith("/uploads") ||
+                path.startsWith("/h2-console")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         LOGGER.info("=== FILTER START === " + request.getMethod() + " " + request.getRequestURI());
 
         String username;
