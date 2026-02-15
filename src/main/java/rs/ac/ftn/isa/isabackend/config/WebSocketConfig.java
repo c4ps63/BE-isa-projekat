@@ -1,5 +1,6 @@
 package rs.ac.ftn.isa.isabackend.config;
 
+import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
