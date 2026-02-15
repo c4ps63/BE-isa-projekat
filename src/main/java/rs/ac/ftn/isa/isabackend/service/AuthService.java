@@ -8,6 +8,7 @@ import rs.ac.ftn.isa.isabackend.model.Role;
 import rs.ac.ftn.isa.isabackend.model.User;
 import rs.ac.ftn.isa.isabackend.repository.RoleRepository;
 import rs.ac.ftn.isa.isabackend.repository.UserRepository;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -59,6 +60,14 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setEnabled(true);
+        userRepository.save(user);
+    }
+
+    public void recordLogin(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
     }
 }
