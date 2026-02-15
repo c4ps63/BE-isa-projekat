@@ -1,12 +1,19 @@
+version: '3.8'
+
 services:
-  postgres:
+  db:
     image: postgres:15-alpine
+    container_name: isa-db
     environment:
-      POSTGRES_DB: jutjubic
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: root
+      POSTGRES_DB: jutjubic
+    ports:
+      - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - isa-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -15,32 +22,38 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management
+    container_name: isa-rabbitmq
     ports:
       - "15673:15672"
+    networks:
+      - isa-network
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  app-1:
+  backend-1:
     build: .
-    ports:
-      - "8081:8080"
-    environment:
-      - DB_URL=jdbc:postgresql://postgres:5432/jutjubic
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=root
-      - RABBITMQ_HOST=rabbitmq
-      - MAIL_PASSWORD=${MAIL_PASSWORD:-dummy}
-      - SITE_BASE_URL=http://localhost:8080/api/auth
-    volumes:
-      - uploads:/app/uploads
+    container_name: isa-backend-1
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_USERNAME: postgres
+      DB_PASSWORD: root
+      RABBITMQ_HOST: rabbitmq
+      MAIL_PASSWORD: "ooamrodyembsczcl"
+      SITE_BASE_URL: http://localhost:8080/api/auth
+      MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
+      APP_DB_INIT_BULK_DATA: "true"
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - isa-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 5s
@@ -48,26 +61,29 @@ services:
       retries: 2
       start_period: 40s
 
-  app-2:
+  backend-2:
     build: .
-    ports:
-      - "8082:8080"
-    environment:
-      - DB_URL=jdbc:postgresql://postgres:5432/jutjubic
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=root
-      - RABBITMQ_HOST=rabbitmq
-      - MAIL_PASSWORD=${MAIL_PASSWORD:-dummy}
-      - SITE_BASE_URL=http://localhost:8080/api/auth
-    volumes:
-      - uploads:/app/uploads
+    container_name: isa-backend-2
     depends_on:
-      app-1:
+      backend-1:
         condition: service_healthy
-      postgres:
+      db:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_USERNAME: postgres
+      DB_PASSWORD: root
+      RABBITMQ_HOST: rabbitmq
+      MAIL_PASSWORD: "ooamrodyembsczcl"
+      SITE_BASE_URL: http://localhost:8080/api/auth
+      MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
+      APP_DB_INIT_BULK_DATA: "true"
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - isa-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 5s
@@ -77,16 +93,23 @@ services:
 
   nginx:
     image: nginx:alpine
+    container_name: isa-load-balancer
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./uploads:/usr/share/nginx/html/uploads:ro
     ports:
       - "8080:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      app-1:
+      backend-1:
         condition: service_healthy
-      app-2:
+      backend-2:
         condition: service_healthy
+    networks:
+      - isa-network
 
 volumes:
-  pgdata:
-  uploads:
+  db_data:
+
+networks:
+  isa-network:
+    driver: bridge

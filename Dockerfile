@@ -10,5 +10,6 @@ FROM eclipse-temurin:17-jre
 RUN apt-get update && apt-get install -y ffmpeg curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
+RUN mkdir -p uploads
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
