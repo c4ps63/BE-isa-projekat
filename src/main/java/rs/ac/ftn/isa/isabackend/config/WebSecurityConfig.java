@@ -89,6 +89,8 @@ public class WebSecurityConfig {
 
                         .requestMatchers("/actuator/**").permitAll()
 
+                        .requestMatchers("/api/trending/**").permitAll()
+
                         .anyRequest().authenticated()
                 );
 
