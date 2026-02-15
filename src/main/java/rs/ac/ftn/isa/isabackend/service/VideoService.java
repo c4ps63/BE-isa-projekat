@@ -174,8 +174,10 @@ public class VideoService {
             Files.createDirectories(rootLocation);
         }
 
-        String videoFileName = "vid_" + UUID.randomUUID() + "_" + videoFile.getOriginalFilename();
-        String thumbFileName = "img_" + UUID.randomUUID() + "_" + thumbnailFile.getOriginalFilename();
+        String videoExt = getFileExtension(videoFile.getOriginalFilename());
+        String thumbExt = getFileExtension(thumbnailFile.getOriginalFilename());
+        String videoFileName = "vid_" + UUID.randomUUID() + videoExt;
+        String thumbFileName = "img_" + UUID.randomUUID() + thumbExt;
 
         Files.copy(videoFile.getInputStream(), this.rootLocation.resolve(videoFileName));
         Files.copy(thumbnailFile.getInputStream(), this.rootLocation.resolve(thumbFileName));
@@ -356,6 +358,12 @@ public class VideoService {
             }
             return clusters;
         }
+    }
+
+    private String getFileExtension(String filename) {
+        if (filename == null) return "";
+        int dotIndex = filename.lastIndexOf('.');
+        return (dotIndex >= 0) ? filename.substring(dotIndex) : "";
     }
 
     private Double[] getCoordinatesFromAddress(String street, String number, String city) {
