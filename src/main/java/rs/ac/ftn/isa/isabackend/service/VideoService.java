@@ -40,23 +40,33 @@ import java.util.HashMap;
 import java.util.stream.Collectors;
 import rs.ac.ftn.isa.isabackend.dto.TileClusterDTO;
 
+import rs.ac.ftn.isa.isabackend.repository.VideoViewRepository;
+import rs.ac.ftn.isa.isabackend.model.VideoView;
+
 @Service
 public class VideoService {
 
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
     private final TileService tileService;
+    private final VideoViewRepository videoViewRepository;
     private final Path rootLocation = Paths.get("uploads");
+
 
     @Autowired
     private CacheManager cacheManager;
 
     @Autowired
-    public VideoService(VideoRepository videoRepository, UserRepository userRepository, TileService tileService, CacheManager cacheManager) {
+    public VideoService(VideoRepository videoRepository,
+                        UserRepository userRepository,
+                        TileService tileService,
+                        CacheManager cacheManager,
+                        VideoViewRepository videoViewRepository) {
         this.videoRepository = videoRepository;
         this.userRepository = userRepository;
         this.tileService = tileService;
         this.cacheManager = cacheManager;
+        this.videoViewRepository = videoViewRepository;
     }
 
     public Page<Video> findAll(int page, int size, String filter) {
@@ -118,10 +128,16 @@ public class VideoService {
         return videoRepository.findByOwnerIdOrderByUploadedAtDesc(ownerId, pageable);
     }
 
-    @Transactional
-    public void incrementViewCount(Long videoId) {
-        videoRepository.incrementViewCount(videoId);
-    }
+        @Transactional
+        public void incrementViewCount(Long videoId) {
+            videoRepository.incrementViewCount(videoId);
+
+            Video video = videoRepository.findById(videoId)
+                    .orElseThrow(() -> new RuntimeException("Video not found for view count increment"));
+
+            VideoView view = new VideoView(video);
+            videoViewRepository.save(view);
+        }
 
     @Transactional
     public Video save(Video video) {
