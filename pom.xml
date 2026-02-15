@@ -131,6 +131,12 @@
 			<version>1.1.1</version>
 		</dependency>
 
+		<!-- Spring AMQP (RabbitMQ) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-amqp</artifactId>
+		</dependency>
+
 		<!-- Thumbnailator - Image Compression -->
 		<dependency>
 			<groupId>net.coobird</groupId>

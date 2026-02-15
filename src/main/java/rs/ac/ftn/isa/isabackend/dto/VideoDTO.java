@@ -2,6 +2,8 @@ package rs.ac.ftn.isa.isabackend.dto;
 
 import rs.ac.ftn.isa.isabackend.model.Video;
 
+import rs.ac.ftn.isa.isabackend.model.TranscodingStatus;
+
 import java.time.LocalDateTime;
 import java.util.Set;
 
@@ -20,6 +22,7 @@ public class VideoDTO {
     private Double latitude;
     private Double longitude;
     private Set<String> tags;
+    private TranscodingStatus transcodingStatus;
 
     public VideoDTO() {
     }
@@ -39,6 +42,7 @@ public class VideoDTO {
         this.latitude = video.getLatitude();
         this.longitude = video.getLongitude();
         this.tags = video.getTags();
+        this.transcodingStatus = video.getTranscodingStatus();
     }
 
     // Getters and Setters
@@ -144,5 +148,13 @@ public class VideoDTO {
 
     public void setTags(Set<String> tags) {
         this.tags = tags;
+    }
+
+    public TranscodingStatus getTranscodingStatus() {
+        return transcodingStatus;
+    }
+
+    public void setTranscodingStatus(TranscodingStatus transcodingStatus) {
+        this.transcodingStatus = transcodingStatus;
     }
 }

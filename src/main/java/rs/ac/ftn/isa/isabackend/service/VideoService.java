@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import rs.ac.ftn.isa.isabackend.dto.VideoDTO;
+import rs.ac.ftn.isa.isabackend.model.TranscodingStatus;
 import rs.ac.ftn.isa.isabackend.model.User;
 import rs.ac.ftn.isa.isabackend.model.Video;
 import rs.ac.ftn.isa.isabackend.repository.UserRepository;
@@ -23,6 +24,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -45,17 +49,19 @@ public class VideoService {
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
     private final TileService tileService;
+    private final TranscodingProducer transcodingProducer;
     private final Path rootLocation = Paths.get("uploads");
 
     @Autowired
     private CacheManager cacheManager;
 
     @Autowired
-    public VideoService(VideoRepository videoRepository, UserRepository userRepository, TileService tileService, CacheManager cacheManager) {
+    public VideoService(VideoRepository videoRepository, UserRepository userRepository, TileService tileService, CacheManager cacheManager, TranscodingProducer transcodingProducer) {
         this.videoRepository = videoRepository;
         this.userRepository = userRepository;
         this.tileService = tileService;
         this.cacheManager = cacheManager;
+        this.transcodingProducer = transcodingProducer;
     }
 
     public Page<Video> findAll(int page, int size, String filter) {
@@ -142,12 +148,26 @@ public class VideoService {
         video.setLatitude(finalLat);
         video.setLongitude(finalLon);
         video.setLocation(street + " " + number + ", " + city);
+        video.setTranscodingStatus(TranscodingStatus.PENDING);
 
         Video savedVideo = videoRepository.save(video);
 
         if (finalLat != 0.0 && finalLon != 0.0) {
             updateMapCache(finalLat, finalLon);
         }
+
+        // Slanje u red poruka za transcoding NAKON sto se transakcija commituje
+        // (inace consumer ne moze naci video u bazi jer transakcija jos traje)
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    transcodingProducer.sendForTranscoding(savedVideo);
+                } catch (Exception e) {
+                    System.err.println("TRANSCODING: Greska pri slanju u queue: " + e.getMessage());
+                }
+            }
+        });
 
         return new VideoDTO(savedVideo);
     }
