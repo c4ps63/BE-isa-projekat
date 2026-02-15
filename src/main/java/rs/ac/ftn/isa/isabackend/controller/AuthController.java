@@ -70,6 +70,7 @@ public class AuthController {
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            authService.recordLogin(loginDto.getEmail());
             String jwt = tokenUtils.generateToken(userDetails);
 
             loginAttemptService.loginSucceeded(ip);

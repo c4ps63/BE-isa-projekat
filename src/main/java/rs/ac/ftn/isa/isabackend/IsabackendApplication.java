@@ -10,7 +10,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 @EnableCaching
 @EnableScheduling
-public class IsabackendApplication {
+public class
+IsabackendApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(IsabackendApplication.class, args);

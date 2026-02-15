@@ -33,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,6 +44,9 @@ import java.util.HashMap;
 import java.util.stream.Collectors;
 import rs.ac.ftn.isa.isabackend.dto.TileClusterDTO;
 
+import rs.ac.ftn.isa.isabackend.repository.VideoViewRepository;
+import rs.ac.ftn.isa.isabackend.model.VideoView;
+
 @Service
 public class VideoService {
 
@@ -50,18 +54,26 @@ public class VideoService {
     private final UserRepository userRepository;
     private final TileService tileService;
     private final TranscodingProducer transcodingProducer;
+    private final VideoViewRepository videoViewRepository;
     private final Path rootLocation = Paths.get("uploads");
+
 
     @Autowired
     private CacheManager cacheManager;
 
     @Autowired
-    public VideoService(VideoRepository videoRepository, UserRepository userRepository, TileService tileService, CacheManager cacheManager, TranscodingProducer transcodingProducer) {
+    public VideoService(VideoRepository videoRepository,
+                      UserRepository userRepository,
+                      TileService tileService,
+                      CacheManager cacheManager,
+                      TranscodingProducer transcodingProducer,
+                      VideoViewRepository videoViewRepository) {
         this.videoRepository = videoRepository;
         this.userRepository = userRepository;
         this.tileService = tileService;
         this.cacheManager = cacheManager;
         this.transcodingProducer = transcodingProducer;
+        this.videoViewRepository = videoViewRepository;
     }
 
     public Page<Video> findAll(int page, int size, String filter) {
@@ -83,15 +95,56 @@ public class VideoService {
         return videoRepository.findById(id);
     }
 
+    public VideoDTO getVideoForPlayback(Long id) {
+        Video video = videoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Video not found"));
+
+        VideoDTO dto = new VideoDTO(video);
+
+        if (Boolean.FALSE.equals(video.getIsScheduled()) || video.getScheduledDateTime() == null) {
+            dto.setStreamingStatus("VOD");
+            dto.setCurrentOffset(0L);
+            return dto;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime start = video.getScheduledDateTime();
+
+        if (now.isBefore(start)) {
+            dto.setStreamingStatus("WAITING");
+            dto.setCurrentOffset(0L);
+            return dto;
+        }
+
+        long secondsSinceStart = ChronoUnit.SECONDS.between(start, now);
+
+        if (video.getDuration() != null && secondsSinceStart > video.getDuration()) {
+            dto.setStreamingStatus("VOD");
+            dto.setCurrentOffset(0L);
+        } else {
+            // 4. Video je LIVE
+            dto.setStreamingStatus("LIVE");
+            dto.setCurrentOffset(secondsSinceStart);
+        }
+
+        return dto;
+    }
+
     public Page<Video> findByOwnerId(Long ownerId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return videoRepository.findByOwnerIdOrderByUploadedAtDesc(ownerId, pageable);
     }
 
-    @Transactional
-    public void incrementViewCount(Long videoId) {
-        videoRepository.incrementViewCount(videoId);
-    }
+        @Transactional
+        public void incrementViewCount(Long videoId) {
+            videoRepository.incrementViewCount(videoId);
+
+            Video video = videoRepository.findById(videoId)
+                    .orElseThrow(() -> new RuntimeException("Video not found for view count increment"));
+
+            VideoView view = new VideoView(video);
+            videoViewRepository.save(view);
+        }
 
     @Transactional
     public Video save(Video video) {
@@ -109,7 +162,10 @@ public class VideoService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public VideoDTO uploadVideoWithUser(String title, String description, MultipartFile videoFile, MultipartFile thumbnailFile, String username, Integer duration, String street, String number, String city) throws IOException {
+    public VideoDTO uploadVideoWithUser(String title, String description, MultipartFile videoFile,
+                                        MultipartFile thumbnailFile, String username, Integer duration,
+                                        String street, String number, String city,
+                                        Boolean isScheduled, LocalDateTime scheduledTime) throws IOException {
 
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Korisnik nije pronađen! (Tražen username: " + username + ")"));
@@ -118,8 +174,10 @@ public class VideoService {
             Files.createDirectories(rootLocation);
         }
 
-        String videoFileName = "vid_" + UUID.randomUUID() + "_" + videoFile.getOriginalFilename();
-        String thumbFileName = "img_" + UUID.randomUUID() + "_" + thumbnailFile.getOriginalFilename();
+        String videoExt = getFileExtension(videoFile.getOriginalFilename());
+        String thumbExt = getFileExtension(thumbnailFile.getOriginalFilename());
+        String videoFileName = "vid_" + UUID.randomUUID() + videoExt;
+        String thumbFileName = "img_" + UUID.randomUUID() + thumbExt;
 
         Files.copy(videoFile.getInputStream(), this.rootLocation.resolve(videoFileName));
         Files.copy(thumbnailFile.getInputStream(), this.rootLocation.resolve(thumbFileName));
@@ -132,8 +190,6 @@ public class VideoService {
         if (coords != null) {
             finalLat = coords[0];
             finalLon = coords[1];
-        } else {
-            System.out.println("Upozorenje: Nije moguće pronaći koordinate za datu adresu.");
         }
 
         Video video = new Video();
@@ -149,6 +205,9 @@ public class VideoService {
         video.setLongitude(finalLon);
         video.setLocation(street + " " + number + ", " + city);
         video.setTranscodingStatus(TranscodingStatus.PENDING);
+
+        video.setIsScheduled(isScheduled != null ? isScheduled : false);
+        video.setScheduledDateTime(scheduledTime);
 
         Video savedVideo = videoRepository.save(video);
 
@@ -180,17 +239,13 @@ public class VideoService {
 
                 String cacheKey = z + "-" + x + "-" + y;
 
-                // Invalidacija standardnog tile cache-a
                 if (cacheManager.getCache("mapTiles") != null) {
                     cacheManager.getCache("mapTiles").evict(cacheKey);
                 }
-
-                // Invalidacija klasteriranog tile cache-a
                 if (cacheManager.getCache("mapTilesClustered") != null) {
                     cacheManager.getCache("mapTilesClustered").evict(cacheKey);
                 }
             }
-            System.out.println("CACHE: Obrisani tile-ovi za novu lokaciju videa.");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -206,97 +261,51 @@ public class VideoService {
         if (minLat == null || maxLat == null || minLng == null || maxLng == null) {
             return new ArrayList<>();
         }
-
         List<Video> videos = videoRepository.findByLatitudeBetweenAndLongitudeBetween(minLat, maxLat, minLng, maxLng);
-
-        return videos.stream()
-                .map(VideoDTO::new)
-                .collect(Collectors.toList());
+        return videos.stream().map(VideoDTO::new).collect(Collectors.toList());
     }
 
     @Cacheable(value = "mapTiles", key = "#z + '-' + #x + '-' + #y")
     public List<VideoDTO> getVideosByTile(int z, int x, int y) {
-        System.out.println("Podaci iz baze za tile " + z + "/" + x + "/" + y);
         TileService.BoundingBox box = tileService.getBoundingBox(x, y, z);
-
         List<Video> videos = videoRepository.findByLatitudeBetweenAndLongitudeBetween(
                 box.minLat, box.maxLat, box.minLng, box.maxLng
         );
-
-        return videos.stream()
-                .map(VideoDTO::new)
-                .collect(Collectors.toList());
+        return videos.stream().map(VideoDTO::new).collect(Collectors.toList());
     }
 
-    /**
-     * Vraca klasterizirane video snimke za dati tile.
-     * Frontend salje efektivni zoom nivo, pa backend samo treba da vrati:
-     * - HIGH zoom (>=12): Svi pojedinacni video snimci
-     * - MEDIUM/LOW zoom (<12): Jedan klaster po tile-u sa reprezentativnim videom
-     */
     @Cacheable(value = "mapTilesClustered", key = "#z + '-' + #x + '-' + #y")
     public List<TileClusterDTO> getClusteredVideosByTile(int z, int x, int y) {
         String zoomLevel = tileService.getZoomLevel(z);
-        System.out.println("Clustered tile " + z + "/" + x + "/" + y + " - Zoom level: " + zoomLevel);
-
         TileService.BoundingBox box = tileService.getBoundingBox(x, y, z);
-
         List<Video> videos = videoRepository.findByLatitudeBetweenAndLongitudeBetween(
                 box.minLat, box.maxLat, box.minLng, box.maxLng
         );
 
-        if (videos.isEmpty()) {
-            return new ArrayList<>();
-        }
+        if (videos.isEmpty()) return new ArrayList<>();
 
         if ("HIGH".equals(zoomLevel)) {
-            // Visoki zoom - vrati sve video snimke kao pojedinacne "klastere"
             return videos.stream()
                     .map(video -> new TileClusterDTO(
-                            video.getLatitude(),
-                            video.getLongitude(),
-                            1,
-                            new VideoDTO(video),
-                            x, y, z
-                    ))
-                    .collect(Collectors.toList());
+                            video.getLatitude(), video.getLongitude(), 1, new VideoDTO(video), x, y, z
+                    )).collect(Collectors.toList());
         } else {
-            // Srednji i niski zoom - vrati jedan klaster za ceo tile
-            // Pronadji reprezentativni video (najvise pregleda)
             Video representative = videos.stream()
                     .max((v1, v2) -> Long.compare(
                             v1.getViewCount() != null ? v1.getViewCount() : 0L,
                             v2.getViewCount() != null ? v2.getViewCount() : 0L
-                    ))
-                    .orElse(videos.get(0));
+                    )).orElse(videos.get(0));
 
-            // Koristi koordinate reprezentativnog videa, NE centar tile-a
-            // Tako klaster ostaje na vidljivoj lokaciji videa
-            TileClusterDTO cluster = new TileClusterDTO(
-                    representative.getLatitude(),
-                    representative.getLongitude(),
-                    videos.size(),
-                    new VideoDTO(representative),
-                    x, y, z
-            );
-
-            return List.of(cluster);
+            return List.of(new TileClusterDTO(
+                    representative.getLatitude(), representative.getLongitude(), videos.size(),
+                    new VideoDTO(representative), x, y, z
+            ));
         }
     }
 
-    /**
-     * Vraca klasterizirane video snimke za viewport.
-     * Svi videi u viewport-u se uvijek prikazu - pojedinacno ili kao klasteri.
-     */
     public List<TileClusterDTO> getClusteredVideosByViewport(
             Double minLat, Double maxLat, Double minLng, Double maxLng, int zoom, String filter) {
-
-        System.out.println("Viewport clustered: zoom=" + zoom + ", filter=" + filter + ", bounds=[" +
-                minLat + "," + maxLat + "," + minLng + "," + maxLng + "]");
-
-        // Ucitaj videe u viewport-u sa primijenjenim filterom
         List<Video> allVideos;
-
         if ("LAST_30_DAYS".equalsIgnoreCase(filter)) {
             LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
             allVideos = videoRepository.findByLatitudeBetweenAndLongitudeBetweenAndUploadedAtAfter(
@@ -306,73 +315,55 @@ public class VideoService {
             allVideos = videoRepository.findByLatitudeBetweenAndLongitudeBetweenAndUploadedAtAfter(
                     minLat, maxLat, minLng, maxLng, cutoffDate);
         } else {
-            allVideos = videoRepository.findByLatitudeBetweenAndLongitudeBetween(
-                    minLat, maxLat, minLng, maxLng);
+            allVideos = videoRepository.findByLatitudeBetweenAndLongitudeBetween(minLat, maxLat, minLng, maxLng);
         }
 
-        if (allVideos.isEmpty()) {
-            return new ArrayList<>();
-        }
+        if (allVideos.isEmpty()) return new ArrayList<>();
 
         String zoomLevel = tileService.getZoomLevel(zoom);
 
         if ("HIGH".equals(zoomLevel)) {
-            // Visoki zoom - svaki video je svoj klaster
             return allVideos.stream()
                     .map(video -> new TileClusterDTO(
-                            video.getLatitude(),
-                            video.getLongitude(),
-                            1,
-                            new VideoDTO(video),
-                            0, 0, zoom
-                    ))
-                    .collect(Collectors.toList());
+                            video.getLatitude(), video.getLongitude(), 1, new VideoDTO(video), 0, 0, zoom
+                    )).collect(Collectors.toList());
         } else {
-            // Srednji/niski zoom - grupisanje po tile-ovima
             int effectiveZoom = tileService.getEffectiveZoom(zoom);
-
-            // Grupisanje videa po tile koordinatama na efektivnom zoom-u
             Map<String, List<Video>> groupedByTile = new HashMap<>();
 
             for (Video video : allVideos) {
                 int tileX = tileService.getTileX(video.getLongitude(), effectiveZoom);
                 int tileY = tileService.getTileY(video.getLatitude(), effectiveZoom);
                 String key = tileX + "-" + tileY;
-
                 groupedByTile.computeIfAbsent(key, k -> new ArrayList<>()).add(video);
             }
 
-            // Kreiraj klaster za svaku grupu
             List<TileClusterDTO> clusters = new ArrayList<>();
-
             for (Map.Entry<String, List<Video>> entry : groupedByTile.entrySet()) {
                 List<Video> videosInTile = entry.getValue();
                 String[] coords = entry.getKey().split("-");
                 int tileX = Integer.parseInt(coords[0]);
                 int tileY = Integer.parseInt(coords[1]);
 
-                // Reprezentativni video - najvise pregleda
                 Video representative = videosInTile.stream()
                         .max((v1, v2) -> Long.compare(
                                 v1.getViewCount() != null ? v1.getViewCount() : 0L,
                                 v2.getViewCount() != null ? v2.getViewCount() : 0L
-                        ))
-                        .orElse(videosInTile.get(0));
+                        )).orElse(videosInTile.get(0));
 
-                // Klaster na lokaciji reprezentativnog videa
-                TileClusterDTO cluster = new TileClusterDTO(
-                        representative.getLatitude(),
-                        representative.getLongitude(),
-                        videosInTile.size(),
-                        new VideoDTO(representative),
-                        tileX, tileY, effectiveZoom
-                );
-
-                clusters.add(cluster);
+                clusters.add(new TileClusterDTO(
+                        representative.getLatitude(), representative.getLongitude(), videosInTile.size(),
+                        new VideoDTO(representative), tileX, tileY, effectiveZoom
+                ));
             }
-
             return clusters;
         }
+    }
+
+    private String getFileExtension(String filename) {
+        if (filename == null) return "";
+        int dotIndex = filename.lastIndexOf('.');
+        return (dotIndex >= 0) ? filename.substring(dotIndex) : "";
     }
 
     private Double[] getCoordinatesFromAddress(String street, String number, String city) {
@@ -385,8 +376,7 @@ public class VideoService {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("User-Agent", "ISABackendProjekat/1.0")
-                    .GET()
-                    .build();
+                    .GET().build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             ObjectMapper mapper = new ObjectMapper();
@@ -398,7 +388,6 @@ public class VideoService {
                 Double lon = firstResult.get("lon").asDouble();
                 return new Double[]{lat, lon};
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
