@@ -66,11 +66,14 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(restAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/activate").permitAll()
 
                         .requestMatchers("/h2-console/**").permitAll()
 
                         .requestMatchers("/uploads/**").permitAll()
+
+                        .requestMatchers("/ws/**").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/api/videos/**").permitAll()
 
@@ -86,6 +89,14 @@ public class WebSecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/likes/toggle/**").permitAll()
 
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        .requestMatchers("/actuator/**").permitAll()
+
+                        .requestMatchers("/api/trending/**").permitAll()
+
+                        .requestMatchers("/api/benchmark/**").permitAll()
+
+                        .requestMatchers("/ws/**").permitAll()
 
                         .anyRequest().authenticated()
                 );

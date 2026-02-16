@@ -14,6 +14,8 @@ import rs.ac.ftn.isa.isabackend.model.Video;
 import rs.ac.ftn.isa.isabackend.service.VideoService;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.Set;
 import java.security.Principal;
@@ -44,12 +46,20 @@ public class VideoController {
 
     @GetMapping("/{id}")
     public ResponseEntity<VideoDTO> getVideoById(@PathVariable Long id) {
-        Optional<Video> video = videoService.findById(id);
+        try {
+            VideoDTO videoDTO = videoService.getVideoForPlayback(id);
+            return ResponseEntity.ok(videoDTO);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 
-        if (video.isPresent()) {
+    @PostMapping("/{id}/view")
+    public ResponseEntity<Void> registerView(@PathVariable Long id) {
+        try {
             videoService.incrementViewCount(id);
-            return ResponseEntity.ok(new VideoDTO(video.get()));
-        } else {
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
@@ -63,6 +73,12 @@ public class VideoController {
         Page<Video> videos = videoService.findByOwnerId(userId, page, size);
         Page<VideoDTO> videoDTOs = videos.map(VideoDTO::new);
         return ResponseEntity.ok(videoDTOs);
+    }
+
+    @GetMapping("/load-test")
+    public ResponseEntity<Long> loadTest() {
+        Long count = videoService.slowQueryForLoadTest();
+        return ResponseEntity.ok(count);
     }
 
     @GetMapping("/viewport")
@@ -100,7 +116,7 @@ public class VideoController {
 
     /**
      * Vraca klasterizirane video snimke za dati viewport.
-     * Garantuje da se svi videi u viewport-u prikazu - bilo kao pojedinacni ili kao klasteri.
+     * Garantuje da se svi videi u viewport-u prikazu - pojedinacno ili kao klasteri.
      */
     @GetMapping("/viewport-clustered")
     public ResponseEntity<List<TileClusterDTO>> getClusteredVideosByViewport(
@@ -124,6 +140,11 @@ public class VideoController {
             @RequestParam("city") String city,
             @RequestParam(value = "tags", required = false) String tags,
             @RequestParam("duration") Integer duration,
+
+            // NOVI PARAMETRI
+            @RequestParam(value = "isScheduled", required = false, defaultValue = "false") Boolean isScheduled,
+            @RequestParam(value = "scheduledTime", required = false) String scheduledTimeStr,
+
             @RequestParam("videoFile") MultipartFile videoFile,
             @RequestParam("thumbnailFile") MultipartFile thumbnailFile,
             Principal principal
@@ -138,13 +159,24 @@ public class VideoController {
 
             String username = principal.getName();
 
-            VideoDTO savedVideo = videoService.uploadVideoWithUser(title, description, videoFile, thumbnailFile, username, duration, street, number, city);
+            // Parsiranje datuma
+            LocalDateTime scheduledDateTime = null;
+            if (Boolean.TRUE.equals(isScheduled) && scheduledTimeStr != null && !scheduledTimeStr.isEmpty()) {
+                // Front salje ISO string (2026-02-15T20:00:00)
+                scheduledDateTime = LocalDateTime.parse(scheduledTimeStr, DateTimeFormatter.ISO_DATE_TIME);
+            }
+
+            VideoDTO savedVideo = videoService.uploadVideoWithUser(
+                    title, description, videoFile, thumbnailFile, username, duration,
+                    street, number, city, isScheduled, scheduledDateTime
+            );
 
             return ResponseEntity.status(HttpStatus.CREATED).body(savedVideo);
 
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Greška pri čuvanju fajla: " + e.getMessage());
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
