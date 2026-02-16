@@ -48,8 +48,17 @@ public class VideoController {
     public ResponseEntity<VideoDTO> getVideoById(@PathVariable Long id) {
         try {
             VideoDTO videoDTO = videoService.getVideoForPlayback(id);
-            videoService.incrementViewCount(id);
             return ResponseEntity.ok(videoDTO);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/{id}/view")
+    public ResponseEntity<Void> registerView(@PathVariable Long id) {
+        try {
+            videoService.incrementViewCount(id);
+            return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
@@ -64,6 +73,12 @@ public class VideoController {
         Page<Video> videos = videoService.findByOwnerId(userId, page, size);
         Page<VideoDTO> videoDTOs = videos.map(VideoDTO::new);
         return ResponseEntity.ok(videoDTOs);
+    }
+
+    @GetMapping("/load-test")
+    public ResponseEntity<Long> loadTest() {
+        Long count = videoService.slowQueryForLoadTest();
+        return ResponseEntity.ok(count);
     }
 
     @GetMapping("/viewport")

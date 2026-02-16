@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: root
       POSTGRES_DB: jutjubic
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
@@ -50,6 +50,8 @@ services:
       SITE_BASE_URL: http://localhost:8080/api/auth
       MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
       APP_DB_INIT_BULK_DATA: "true"
+    ports:
+      - "8081:8080"
     volumes:
       - ./uploads:/app/uploads
     networks:

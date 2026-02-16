@@ -82,21 +82,25 @@ public class VideoService {
 
     public Page<Video> findAll(int page, int size, String filter) {
         Pageable pageable = PageRequest.of(page, size);
-        LocalDateTime cutoffDate;
+        LocalDateTime now = LocalDateTime.now();
 
         if ("LAST_30_DAYS".equalsIgnoreCase(filter)) {
-            cutoffDate = LocalDateTime.now().minusDays(30);
-            return videoRepository.findByUploadedAtAfterOrderByUploadedAtDesc(cutoffDate, pageable);
+            LocalDateTime cutoffDate = now.minusDays(30);
+            return videoRepository.findAvailableVideosAfterDate(now, cutoffDate, pageable);
         } else if ("THIS_YEAR".equalsIgnoreCase(filter)) {
-            cutoffDate = LocalDateTime.now().withDayOfYear(1).toLocalDate().atStartOfDay();
-            return videoRepository.findByUploadedAtAfterOrderByUploadedAtDesc(cutoffDate, pageable);
+            LocalDateTime cutoffDate = now.withDayOfYear(1).toLocalDate().atStartOfDay();
+            return videoRepository.findAvailableVideosAfterDate(now, cutoffDate, pageable);
         } else {
-            return videoRepository.findAllByOrderByUploadedAtDesc(pageable);
+            return videoRepository.findAvailableVideos(now, pageable);
         }
     }
 
     public Optional<Video> findById(Long id) {
         return videoRepository.findById(id);
+    }
+
+    public Long slowQueryForLoadTest() {
+        return videoRepository.slowCountForLoadTest();
     }
 
     public VideoDTO getVideoForPlayback(Long id) {
@@ -122,7 +126,7 @@ public class VideoService {
 
         long secondsSinceStart = ChronoUnit.SECONDS.between(start, now);
 
-        if (video.getDuration() != null && secondsSinceStart > video.getDuration()) {
+        if (video.getDuration() != null && video.getDuration() > 0 && secondsSinceStart > video.getDuration()) {
             dto.setStreamingStatus("VOD");
             dto.setCurrentOffset(0L);
         } else {

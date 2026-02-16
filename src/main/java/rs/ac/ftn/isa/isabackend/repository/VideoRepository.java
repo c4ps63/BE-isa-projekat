@@ -18,6 +18,12 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     Page<Video> findByOwnerIdOrderByUploadedAtDesc(Long ownerId, Pageable pageable);
     Page<Video> findByUploadedAtAfterOrderByUploadedAtDesc(LocalDateTime date, Pageable pageable);
 
+    @Query("SELECT v FROM Video v WHERE (v.isScheduled = false OR v.isScheduled IS NULL OR v.scheduledDateTime <= :now) ORDER BY v.uploadedAt DESC")
+    Page<Video> findAvailableVideos(@Param("now") LocalDateTime now, Pageable pageable);
+
+    @Query("SELECT v FROM Video v WHERE (v.isScheduled = false OR v.isScheduled IS NULL OR v.scheduledDateTime <= :now) AND v.uploadedAt >= :cutoff ORDER BY v.uploadedAt DESC")
+    Page<Video> findAvailableVideosAfterDate(@Param("now") LocalDateTime now, @Param("cutoff") LocalDateTime cutoff, Pageable pageable);
+
     @Modifying
     @Query("UPDATE Video v SET v.viewCount = v.viewCount + 1 WHERE v.id = :videoId")
     void incrementViewCount(@Param("videoId") Long videoId);
@@ -42,6 +48,10 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
             @Param("maxLat") Double maxLat,
             @Param("minLng") Double minLng,
             @Param("maxLng") Double maxLng);
+
+    // Simulira spor upit za testiranje opterecenja (drzi DB konekciju 100ms)
+    @Query(value = "SELECT COUNT(*) FROM videos v, pg_sleep(0.1)", nativeQuery = true)
+    Long slowCountForLoadTest();
 
     // Pronalazi videe sa nekompresovanim thumbnailima starijim od datuma
     List<Video> findByThumbnailCompressedFalseAndUploadedAtBefore(LocalDateTime date);
