@@ -46,6 +46,7 @@ import rs.ac.ftn.isa.isabackend.dto.TileClusterDTO;
 
 import rs.ac.ftn.isa.isabackend.repository.VideoViewRepository;
 import rs.ac.ftn.isa.isabackend.model.VideoView;
+import rs.ac.ftn.isa.isabackend.dto.UploadEvent;
 
 @Service
 public class VideoService {
@@ -54,6 +55,7 @@ public class VideoService {
     private final UserRepository userRepository;
     private final TileService tileService;
     private final TranscodingProducer transcodingProducer;
+    private final UploadEventProducer uploadEventProducer;
     private final VideoViewRepository videoViewRepository;
     private final Path rootLocation = Paths.get("uploads");
 
@@ -67,12 +69,14 @@ public class VideoService {
                       TileService tileService,
                       CacheManager cacheManager,
                       TranscodingProducer transcodingProducer,
+                      UploadEventProducer uploadEventProducer,
                       VideoViewRepository videoViewRepository) {
         this.videoRepository = videoRepository;
         this.userRepository = userRepository;
         this.tileService = tileService;
         this.cacheManager = cacheManager;
         this.transcodingProducer = transcodingProducer;
+        this.uploadEventProducer = uploadEventProducer;
         this.videoViewRepository = videoViewRepository;
     }
 
@@ -224,6 +228,26 @@ public class VideoService {
                     transcodingProducer.sendForTranscoding(savedVideo);
                 } catch (Exception e) {
                     System.err.println("TRANSCODING: Greska pri slanju u queue: " + e.getMessage());
+                }
+
+                try {
+                    UploadEvent uploadEvent = new UploadEvent(
+                            savedVideo.getId(),
+                            savedVideo.getTitle(),
+                            savedVideo.getVideoUrl(),
+                            videoFile.getSize(),
+                            username,
+                            savedVideo.getUploadedAt().toString(),
+                            getFileExtension(savedVideo.getVideoUrl()),
+                            savedVideo.getLocation(),
+                            savedVideo.getLatitude(),
+                            savedVideo.getLongitude(),
+                            savedVideo.getDuration() != null ? savedVideo.getDuration() : 0,
+                            savedVideo.getDescription()
+                    );
+                    uploadEventProducer.sendUploadEvent(uploadEvent);
+                } catch (Exception e) {
+                    System.err.println("UPLOAD-EVENT: Greska pri slanju u queue: " + e.getMessage());
                 }
             }
         });

@@ -91,6 +91,20 @@ services:
       retries: 2
       start_period: 40s
 
+  upload-event-consumer:
+    build:
+      context: ./upload-event-consumer
+    container_name: isa-upload-event-consumer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    ports:
+      - "8090:8090"
+    networks:
+      - isa-network
+
   nginx:
     image: nginx:alpine
     container_name: isa-load-balancer
