@@ -26,8 +26,8 @@ public class ImageCompressionService {
     @Autowired
     private VideoRepository videoRepository;
 
-    @Scheduled(cron = "*/30 * * * * ?")
-    //@Scheduled(cron = "0 0 4 * * ?")
+    //@Scheduled(cron = "*/30 * * * * ?")
+    @Scheduled(cron = "0 0 4 * * ?")
     public void compressOldThumbnails() {
         System.out.println("KOMPRESIJA: Pokretanje dnevne kompresije slika... " + LocalDateTime.now());
         int result = compressImages();

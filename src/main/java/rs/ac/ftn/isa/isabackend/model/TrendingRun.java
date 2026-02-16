@@ -24,6 +24,7 @@ public class TrendingRun {
     private LocalDateTime ranAt;
 
     @OneToMany(mappedBy = "run", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OrderBy("rank ASC")
     private List<TrendingItem> items = new ArrayList<>();
 
     public TrendingRun(LocalDateTime ranAt) {

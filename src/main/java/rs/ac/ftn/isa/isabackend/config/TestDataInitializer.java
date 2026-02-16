@@ -82,6 +82,10 @@ public class TestDataInitializer implements CommandLineRunner {
             user1 = userRepository.save(user1);
         } else {
             user1 = user1Opt.get();
+            if (user1.getAvatarUrl() == null || user1.getAvatarUrl().isEmpty()) {
+                user1.setAvatarUrl("https://picsum.photos/id/53/600/500");
+                user1 = userRepository.save(user1);
+            }
         }
 
         User user2;
@@ -101,6 +105,10 @@ public class TestDataInitializer implements CommandLineRunner {
             user2 = userRepository.save(user2);
         } else {
             user2 = user2Opt.get();
+            if (user2.getAvatarUrl() == null || user2.getAvatarUrl().isEmpty()) {
+                user2.setAvatarUrl("https://picsum.photos/id/41/600/500");
+                user2 = userRepository.save(user2);
+            }
         }
 
         // 3. KREIRANJE VIDEA
