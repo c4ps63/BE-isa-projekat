@@ -11,5 +11,6 @@ RUN apt-get update && apt-get install -y ffmpeg curl && rm -rf /var/lib/apt/list
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 RUN mkdir -p uploads
+COPY seed-uploads/ uploads/
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
