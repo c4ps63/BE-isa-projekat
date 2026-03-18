@@ -15,7 +15,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/watch-party")
-@CrossOrigin(origins = "http://localhost:4200")
 public class WatchPartyController {
 
     private final WatchPartyService watchPartyService;
